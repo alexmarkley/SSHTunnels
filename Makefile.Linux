@@ -1,0 +1,18 @@
+
+TOOL_NAME=SSHTunnels
+
+TOOL_OBJECTS=main.o log.o util.o
+
+CFLAGS+=-Wall -O2
+LDFLAGS+=-Wall
+
+all: $(TOOL_NAME)
+	@echo All Done
+
+$(TOOL_NAME): $(TOOL_OBJECTS)
+	$(CC) $(LDFLAGS) -o $(TOOL_NAME) $(TOOL_OBJECTS)
+
+clean:
+	rm -f SSHTunnels *.o
+
+

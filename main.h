@@ -15,6 +15,8 @@
 #include <unistd.h>
 #include <errno.h>
 #include <string.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 #define TRUE 1
 #define FALSE 0
