@@ -19,6 +19,8 @@ struct tunnel *tunnel_create(char **argv, char **envp, int uptoken_enabled)
 	static int nextid = 1;
 	struct tunnel *newtun = NULL;
 	
+	logline(LOG_INFO, TUNNEL_MODULE "Creating tunnel object...", nextid);
+	
 	if((newtun = (struct tunnel *)calloc(1, sizeof(struct tunnel))) == NULL)
 		{
 		logline(LOG_ERROR, TUNNEL_MODULE "out of memory!", nextid);
@@ -43,8 +45,6 @@ struct tunnel *tunnel_create(char **argv, char **envp, int uptoken_enabled)
 	newtun->uptoken_sent = 0;
 	newtun->trouble = 0;
 	newtun->trouble_launchnext = 0;
-	
-	logline(LOG_INFO, TUNNEL_MODULE "Created tunnel object.", newtun->id);
 	
 	nextid++;
 	return newtun;
@@ -122,7 +122,7 @@ int tunnel_maintenance(struct tunnel *tun)
 					}
 				else //Uptoken sent!
 					{
-					logline(LOG_INFO, TUNNEL_MODULE "uptoken (%c) sent to far end.", tun->id, tun->uptoken);
+					//logline(LOG_INFO, TUNNEL_MODULE "uptoken (%c) sent to far end.", tun->id, tun->uptoken);
 					tun->uptoken_sent = now;
 					}
 				}
@@ -147,7 +147,7 @@ int tunnel_maintenance(struct tunnel *tun)
 					//Does the uptoken match?
 					if(uptoken_string[0] == tun->uptoken)
 						{
-						logline(LOG_INFO, TUNNEL_MODULE "uptoken (%c) received from far end.", tun->id, tun->uptoken);
+						//logline(LOG_INFO, TUNNEL_MODULE "uptoken (%c) received from far end.", tun->id, tun->uptoken);
 						//Okay! Forget this uptoken so we can pick a new one next round.
 						tun->uptoken = -1;
 						}
@@ -163,7 +163,7 @@ int tunnel_maintenance(struct tunnel *tun)
 			//Did we run into trouble that would require us to send a signal to the child process?
 			if(tun->uptoken_condemned)
 				{
-				logline(LOG_WARNING, TUNNEL_MODULE "uptoken condemned tunnel process. Sending SIGKILL...", tun->id);
+				logline(LOG_WARNING, TUNNEL_MODULE "uptoken condemned tunnel process %d. Sending SIGKILL...", tun->id, tun->pid);
 				if(kill(tun->pid, SIGKILL) == -1)
 					{
 					logline(LOG_WARNING, TUNNEL_MODULE "kill(%d, SIGKILL) failed! (%s)", tun->id, tun->pid, strerror(errno));
@@ -207,7 +207,28 @@ int tunnel_destroy(struct tunnel *tun)
 	if(tun == NULL)
 		return FALSE;
 	
-	//FIXME FIXME FIXME - Let's make sure the child process and pipes are all cleaned up.
+	logline(LOG_INFO, TUNNEL_MODULE "Destroying tunnel object...", tun->id);
+	
+	//Let's make sure the child process is dead.
+	if(tun->pid > 0)
+		{
+		logline(LOG_INFO, TUNNEL_MODULE "Process %d still running. Sending SIGKILL...", tun->id, tun->pid);
+		if(kill(tun->pid, SIGKILL) == -1)
+			{
+			logline(LOG_WARNING, TUNNEL_MODULE "kill(%d, SIGKILL) failed! (%s)", tun->id, tun->pid, strerror(errno));
+			}
+		else
+			{
+			//Since we successfully sent a signal we now need to waitpid() until the child process dies.
+			waitpid(tun->pid, NULL, 0);
+			}
+		}
+	
+	//Let's make sure any remaining pipes are closed.
+	if(!stdpipes_close_remaining(tun->pipe_stdin, tun->pipe_stdout, tun->pipe_stderr))
+		{
+		logline(LOG_WARNING, TUNNEL_MODULE "stdpipes_close_remaining() returned an error!", tun->id);
+		}
 	
 	free(tun);
 	return TRUE;

@@ -3,7 +3,7 @@ TOOL_NAME=SSHTunnels
 
 TOOL_OBJECTS=main.o log.o util.o tunnel.o
 
-CFLAGS+=-Wall -O2
+CFLAGS+=-Wall -O2 -g
 LDFLAGS+=-Wall -lm
 
 all: $(TOOL_NAME)

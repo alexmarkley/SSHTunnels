@@ -23,7 +23,7 @@ struct tunnel
 	int pipe_stdin[2], pipe_stdout[2], pipe_stderr[2];
 	int uptoken_enabled, uptoken_condemned;
 	char uptoken;
-	time_t pid_launched, uptoken_sent, trouble_launchdelay;
+	time_t pid_launched, uptoken_sent, trouble_launchnext;
 	int trouble;
 	};
 

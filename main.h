@@ -17,6 +17,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <signal.h>
 
 #define TRUE 1
 #define FALSE 0
