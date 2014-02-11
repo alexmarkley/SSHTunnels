@@ -26,6 +26,7 @@ int stdpipes_create(int *pipe_stdin, int *pipe_stdout, int *pipe_stderr);
 int stdpipes_close_far_end_parent(int *pipe_stdin, int *pipe_stdout, int *pipe_stderr);
 int stdpipes_close_far_end_child(int *pipe_stdin, int *pipe_stdout, int *pipe_stderr);
 int stdpipes_replace(int *pipe_stdin, int *pipe_stdout, int *pipe_stderr);
+int stdpipes_close_remaining(int *pipe_stdin, int *pipe_stdout, int *pipe_stderr);
 int fd_set_nonblock(int fd);
 
 #define __SSHTUNNELS_UTIL_H

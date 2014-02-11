@@ -92,16 +92,19 @@ int stdpipes_close_far_end_parent(int *pipe_stdin, int *pipe_stdout, int *pipe_s
 		logline(LOG_ERROR, "stdpipes_close_far_end_parent: Call to close() for stdin read failed! (%s)", strerror(errno));
 		return FALSE;
 		}
+	pipe_stdin[PIPE_READ] = -1;
 	if(close(pipe_stdout[PIPE_WRITE]) < 0)
 		{
 		logline(LOG_ERROR, "stdpipes_close_far_end_parent: Call to close() for stdout write failed! (%s)", strerror(errno));
 		return FALSE;
 		}
+	pipe_stdout[PIPE_WRITE] = -1;
 	if(close(pipe_stderr[PIPE_WRITE]) < 0)
 		{
 		logline(LOG_ERROR, "stdpipes_close_far_end_parent: Call to close() for stderr write failed! (%s)", strerror(errno));
 		return FALSE;
 		}
+	pipe_stderr[PIPE_WRITE] = -1;
 	return TRUE;
 	}
 
@@ -114,16 +117,19 @@ int stdpipes_close_far_end_child(int *pipe_stdin, int *pipe_stdout, int *pipe_st
 		logline(LOG_ERROR, "stdpipes_close_far_end_child: Call to close() for stdin write failed! (%s)", strerror(errno));
 		return FALSE;
 		}
+	pipe_stdin[PIPE_WRITE] = -1;
 	if(close(pipe_stdout[PIPE_READ]) < 0)
 		{
 		logline(LOG_ERROR, "stdpipes_close_far_end_child: Call to close() for stdout read failed! (%s)", strerror(errno));
 		return FALSE;
 		}
+	pipe_stdout[PIPE_READ] = -1;
 	if(close(pipe_stderr[PIPE_READ]) < 0)
 		{
 		logline(LOG_ERROR, "stdpipes_close_far_end_child: Call to close() for stderr read failed! (%s)", strerror(errno));
 		return FALSE;
 		}
+	pipe_stderr[PIPE_READ] = -1;
 	return TRUE;
 	}
 
@@ -147,6 +153,34 @@ int stdpipes_replace(int *pipe_stdin, int *pipe_stdout, int *pipe_stderr)
 		logline(LOG_ERROR, "stdpipes_replace: Call to dup2() for stderr failed! (%s)", strerror(errno));
 		return FALSE;
 		}
+	return TRUE;
+	}
+
+//Closes any remaining open pipes from the standard pipes.
+//Returns TRUE on success or FALSE on error.
+int stdpipes_close_remaining(int *pipe_stdin, int *pipe_stdout, int *pipe_stderr)
+	{
+	int *pipes[6], i;
+	pipes[0] = &pipe_stdin[PIPE_READ];
+	pipes[1] = &pipe_stdin[PIPE_WRITE];
+	pipes[2] = &pipe_stdout[PIPE_READ];
+	pipes[3] = &pipe_stdout[PIPE_WRITE];
+	pipes[4] = &pipe_stderr[PIPE_READ];
+	pipes[5] = &pipe_stderr[PIPE_WRITE];
+	
+	for(i = 0; i < 6; i++)
+		{
+		if(*pipes[i] != -1)
+			{
+			if(close(*pipes[i]) < 0)
+				{
+				logline(LOG_ERROR, "stdpipes_close_remaining: close() failed! (%s)", strerror(errno));
+				return FALSE;
+				}
+			*pipes[i] = -1;
+			}
+		}
+	
 	return TRUE;
 	}
 
