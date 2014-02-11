@@ -14,7 +14,7 @@
 
 #define TUNNEL_MODULE "tunnel %d: "
 
-struct tunnel *tunnel_create(char **argv, char **envp)
+struct tunnel *tunnel_create(char **argv, char **envp, int uptoken_enabled)
 	{
 	static int nextid = 1;
 	struct tunnel *newtun = NULL;
@@ -37,8 +37,12 @@ struct tunnel *tunnel_create(char **argv, char **envp)
 	newtun->pipe_stdout[PIPE_WRITE] = -1;
 	newtun->pipe_stderr[PIPE_READ] = -1;
 	newtun->pipe_stderr[PIPE_WRITE] = -1;
+	newtun->uptoken_enabled = uptoken_enabled;
+	newtun->uptoken_condemned = FALSE;
 	newtun->uptoken = -1;
 	newtun->uptoken_sent = 0;
+	newtun->trouble = 0;
+	newtun->trouble_launchnext = 0;
 	
 	logline(LOG_INFO, TUNNEL_MODULE "Created tunnel object.", newtun->id);
 	
@@ -48,19 +52,29 @@ struct tunnel *tunnel_create(char **argv, char **envp)
 
 int tunnel_maintenance(struct tunnel *tun)
 	{
+	static int srand_seeded = FALSE;
 	int tunnel_status;
 	pid_t waitpid_return;
-	char logline_prefix[128];
-	time_t now;
+	char logline_prefix[128], uptoken_string[TUNNEL_UPTOKENBUFFERSIZE];
+	time_t now, launchdelay_seconds;
+	float rnum;
+	ssize_t ioret;
+	
 	now = time(NULL);
 	
-	logline(LOG_INFO, TUNNEL_MODULE "Maintenance loop.", tun->id);
+	if(!srand_seeded)
+		{
+		srand((unsigned int)now);
+		srand_seeded = TRUE;
+		}
+	
+	//logline(LOG_INFO, TUNNEL_MODULE "Maintenance loop.", tun->id);
 	
 	//No PID? (yet?)
 	if(!tun->pid)
 		{
 		//Make sure we're not launching too quickly.
-		if(now >= (tun->pid_launched + TUNNEL_LAUNCHTHROTTLE))
+		if(now >= (tun->trouble_launchnext))
 			{
 			if(!tunnel_process_launch(tun))
 				{
@@ -72,20 +86,91 @@ int tunnel_maintenance(struct tunnel *tun)
 		}
 	
 	//Check STDERR for any messages from the child we need to report.
-	if(tun->pipe_stdout[PIPE_READ] != -1)
-		{
-		sprintf(logline_prefix, TUNNEL_MODULE "stdout: ", tun->id);
-		tunnel_check_stderr(tun->pipe_stdout[PIPE_READ], logline_prefix);
-		}
 	if(tun->pipe_stderr[PIPE_READ] != -1)
 		{
 		sprintf(logline_prefix, TUNNEL_MODULE "stderr: ", tun->id);
 		tunnel_check_stderr(tun->pipe_stderr[PIPE_READ], logline_prefix);
 		}
 	
-	//We DO have a PID.
+	//We DO have a PID. Child process should be running.
 	if(tun->pid)
 		{
+		//Reset trouble counter if the process has run for at least TUNNEL_TROUBLERESETTIME seconds.
+		if(tun->trouble > 0 && now > (tun->pid_launched + TUNNEL_TROUBLERESETTIME))
+			{
+			logline(LOG_INFO, TUNNEL_MODULE "Resetting trouble counter.", tun->id);
+			tun->trouble = 0;
+			}
+		
+		//Uptoken stuff gets handled here too.
+		if(tun->uptoken_enabled && !tun->uptoken_condemned && tun->pipe_stdin[PIPE_WRITE] >= 0 && tun->pipe_stdout[PIPE_READ] >= 0)
+			{
+			if(tun->uptoken < 0) //We have not yet sent an uptoken.
+				{
+				//Choose an uptoken. (ASCII 33-126)
+				rnum = (float)rand() / (float)RAND_MAX;
+				rnum = roundf(rnum * 93.0);
+				tun->uptoken = (char)rnum + (char)33;
+				sprintf(uptoken_string, "%c\n", tun->uptoken);
+				if((ioret = write_all(tun->pipe_stdin[PIPE_WRITE], uptoken_string, strlen(uptoken_string))) != strlen(uptoken_string))
+					{
+					if(ioret == -1)
+						logline(LOG_ERROR, TUNNEL_MODULE "uptoken write() failed! (%s)", tun->id, strerror(errno));
+					else //Couldn't write enough bytes, but no reported error.
+						logline(LOG_ERROR, TUNNEL_MODULE "uptoken write() failed for unknown reason!", tun->id);
+					tun->uptoken_condemned = TRUE; //Mark this tunnel process as condemned by the uptoken system.
+					}
+				else //Uptoken sent!
+					{
+					logline(LOG_INFO, TUNNEL_MODULE "uptoken (%c) sent to far end.", tun->id, tun->uptoken);
+					tun->uptoken_sent = now;
+					}
+				}
+			else if(now >= (tun->uptoken_sent + TUNNEL_UPTOKENWAITTIME)) //We have previously sent an uptoken. Has the uptoken wait time elapsed?
+				{
+				//Check the pipe for a reply from the far end. The first byte should exactly match our uptoken.
+				memset(uptoken_string, 0, TUNNEL_UPTOKENBUFFERSIZE);
+				ioret = read_all(tun->pipe_stdout[PIPE_READ], uptoken_string, (TUNNEL_UPTOKENBUFFERSIZE - 1));
+				if(ioret == -1 && errno != EAGAIN && errno != EWOULDBLOCK)
+					{
+					logline(LOG_ERROR, TUNNEL_MODULE "uptoken read() failed! (%s)", tun->id, strerror(errno));
+					tun->uptoken_condemned = TRUE; //Mark this tunnel process as condemned by the uptoken system.
+					}
+				else if(strlen(uptoken_string) < 2) //No error reported by read(), but still didn't get enough bytes.
+					{
+					logline(LOG_WARNING, TUNNEL_MODULE "uptoken read() didn't return enough bytes! uptoken did not come back.", tun->id);
+					//logline(LOG_INFO, TUNNEL_MODULE "Details: (%d, %d, \"%s\")", tun->id, ioret, strlen(uptoken_string), uptoken_string);
+					tun->uptoken_condemned = TRUE; //Mark this tunnel process as condemned by the uptoken system.
+					}
+				else //We did get enough bytes.
+					{
+					//Does the uptoken match?
+					if(uptoken_string[0] == tun->uptoken)
+						{
+						logline(LOG_INFO, TUNNEL_MODULE "uptoken (%c) received from far end.", tun->id, tun->uptoken);
+						//Okay! Forget this uptoken so we can pick a new one next round.
+						tun->uptoken = -1;
+						}
+					else
+						{
+						//Oh dear! We got something unexpected back from the far end.
+						logline(LOG_WARNING, TUNNEL_MODULE "uptoken does not match! The far end sent something strange.", tun->id);
+						tun->uptoken_condemned = TRUE; //Mark this tunnel process as condemned by the uptoken system.
+						}
+					}
+				}
+			
+			//Did we run into trouble that would require us to send a signal to the child process?
+			if(tun->uptoken_condemned)
+				{
+				logline(LOG_WARNING, TUNNEL_MODULE "uptoken condemned tunnel process. Sending SIGKILL...", tun->id);
+				if(kill(tun->pid, SIGKILL) == -1)
+					{
+					logline(LOG_WARNING, TUNNEL_MODULE "kill(%d, SIGKILL) failed! (%s)", tun->id, tun->pid, strerror(errno));
+					}
+				}
+			}
+		
 		//Poll (non-blocking) for this tunnel's child process exit status.
 		waitpid_return = waitpid(tun->pid, &tunnel_status, WNOHANG);
 		if(waitpid_return < 0)
@@ -95,8 +180,17 @@ int tunnel_maintenance(struct tunnel *tun)
 			}
 		else if(waitpid_return == tun->pid)
 			{
-			logline(LOG_INFO, TUNNEL_MODULE "waitpid() says the child exited with status %d", tun->id, WEXITSTATUS(tunnel_status));
-			tun->pid = 0;
+			logline(LOG_WARNING, TUNNEL_MODULE "Child process exited with status %d!", tun->id, WEXITSTATUS(tunnel_status));
+			tun->pid = 0; //No more PID.
+			tun->uptoken = -1; //Clear uptoken too.
+			tun->uptoken_condemned = FALSE;
+			//If the child process dies for any reason, the trouble level goes up. (Up to TUNNEL_TROUBLEMAX)
+			if(tun->trouble < TUNNEL_TROUBLEMAX)
+				tun->trouble = tun->trouble + 1;
+			//With the calculated trouble level comes a launch delay.
+			launchdelay_seconds = (time_t)powf((float)2.0, (float)tun->trouble);
+			tun->trouble_launchnext = now + launchdelay_seconds;
+			logline(LOG_INFO, TUNNEL_MODULE "Will wait at least %d seconds before relaunching.", tun->id, launchdelay_seconds);
 			if(!stdpipes_close_remaining(tun->pipe_stdin, tun->pipe_stdout, tun->pipe_stderr))
 				{
 				logline(LOG_ERROR, TUNNEL_MODULE "stdpipes_close_remaining() returned an error!", tun->id);

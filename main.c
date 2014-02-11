@@ -17,9 +17,9 @@ int main(int argc, char **argv, char **envp)
 	{
 	int finished = FALSE;
 	struct tunnel *tun;
-	char *newargv[] = { "/usr/bin/tee", "--version", NULL };
+	char *newargv[] = { "/usr/bin/ssh", "elbmin", "tee", NULL };
 	
-	tun = tunnel_create(newargv, envp);
+	tun = tunnel_create(newargv, envp, TRUE);
 	
 	while(!finished)
 		{
