@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!--
+  SSHTunnels - A program for generating and maintaining SSH Tunnels
+  
+  SSHTunnels_config.xml
+      - Example configuration file.
+      - Defines backend tunnel processes.
+  
+  Alex Markley; All Rights Reserved
+-->
+
+<!--
+  CONFIGURATION INSTRUCTIONS
+  
+    <SSHTunnels>
+      - Top-level XML tag.
+      - Attributes:
+          LogOutput (optional, defaults to stderr) should be stderr, stdout, or the literal path to a log file name.
+          SleepTimer (optional, defaults to 5) is an integer number of seconds that the main loop will sleep before doing anything else. Turning this up past 5 seconds has the potential to decrease your CPU usage, but will cause all of the tunnel monitoring processes to become less responsive.
+    
+    <Tunnel>
+      - XML tag representing a tunnel process.
+      - Attributes:
+          UpTokenEnabled (optional, defaults to TRUE) should be true or false. If true, we will send characters to the Tunnel process's STDIN and look for them to come back via the Tunnel process's STDOUT. This behavior is most useful if you are logging into a remote system with ssh and executing tee.
+    
+    <ProgramArgument>
+      - Represents an argument to the tunnel process. The first argument must be the full path to the executable program being launched! This is exactly equivalent to the argv which is passed to execve. See man 2 execve for details.
+      - Attributes:
+          v (required) the argument variable being passed.
+    
+    <ProgramEnvironment>
+      - Represents an addition to the tunnel process's environment. By default we pass an exact copy of the parent process's environment to the tunnel process. <ProgramEnvironment> can be used to either add or replace environment variables.
+      - Attributes:
+          v (required) the environment variable being added or overwritten. By convention this should be KEY=value
+
+-->
+<SSHTunnels LogOutput="stderr" SleepTimer="5">
+	<Tunnel UpTokenEnabled="true">
+		<ProgramArgument v="/usr/bin/tee" />
+	</Tunnel>
+	<Tunnel UpTokenEnabled="true">
+		<ProgramArgument v="/usr/bin/ssh" />
+		<ProgramArgument v="elbmin" />
+		<ProgramArgument v="tee" />
+	</Tunnel>
+	<Tunnel UpTokenEnabled="false">
+		<ProgramEnvironment v="WORLD=Earth" />
+		<ProgramArgument v="/bin/sh" />
+		<ProgramArgument v="-c" />
+		<ProgramArgument v="echo Hello $WORLD" />
+	</Tunnel>
+</SSHTunnels>
+
