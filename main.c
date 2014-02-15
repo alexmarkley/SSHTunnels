@@ -250,7 +250,7 @@ void tagstart(void *data, const char *name, const char **attributes)
 					state->newargv_pos = 0;
 					state->newenvp = NULL;
 					state->newenvp_len = 0;
-					state->newargv_pos = 0;
+					state->newenvp_pos = 0;
 					
 					//Initialize envp using values from defenvp.
 					for(i = 0; state->defenvp[i]; i++)
