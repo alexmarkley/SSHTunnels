@@ -28,11 +28,12 @@ enum
 #define LOG_SUPRESS_ALL_INFO FALSE //(Can be TRUE or FALSE).
 
 //We can do any number of things here. We could write these to a log file, we could open informational dialog boxes, whatever.
-#define LOG_OUT stderr
+#define LOG_DEFAULT_OUT stderr
 
 //Message formatting buffer size incrementation.
 #define LOG_BUFFERLEN_STEP 128
 
+FILE *logoutput(FILE *replace);
 void logline(int status, char *message_format, ...); //Now supports printf() format conversion.
 
 #define __SSHTUNNELS_LOG_H

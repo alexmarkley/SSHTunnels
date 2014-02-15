@@ -21,6 +21,9 @@ struct tunnel *tunnel_create(char **argv, char **envp, int uptoken_enabled)
 	
 	logline(LOG_INFO, TUNNEL_MODULE "Creating tunnel object...", nextid);
 	
+	if(!uptoken_enabled)
+		logline(LOG_WARNING, TUNNEL_MODULE "Tunnel UpToken is disabled. We will not be able to properly detect if the tunnel goes down.", nextid);
+	
 	if((newtun = (struct tunnel *)calloc(1, sizeof(struct tunnel))) == NULL)
 		{
 		logline(LOG_ERROR, TUNNEL_MODULE "out of memory!", nextid);
@@ -90,6 +93,13 @@ int tunnel_maintenance(struct tunnel *tun)
 		{
 		sprintf(logline_prefix, TUNNEL_MODULE "stderr: ", tun->id);
 		tunnel_check_stderr(tun->pipe_stderr[PIPE_READ], logline_prefix);
+		}
+	
+	//If we're not using STDOUT for UpToken, we should check that for messages we need to report.
+	if(!tun->uptoken_enabled && tun->pipe_stdout[PIPE_READ] != -1)
+		{
+		sprintf(logline_prefix, TUNNEL_MODULE "stdout: ", tun->id);
+		tunnel_check_stderr(tun->pipe_stdout[PIPE_READ], logline_prefix);
 		}
 	
 	//We DO have a PID. Child process should be running.
@@ -202,10 +212,10 @@ int tunnel_maintenance(struct tunnel *tun)
 	return TRUE;
 	}
 
-int tunnel_destroy(struct tunnel *tun)
+void tunnel_destroy(struct tunnel *tun)
 	{
 	if(tun == NULL)
-		return FALSE;
+		return;
 	
 	logline(LOG_INFO, TUNNEL_MODULE "Destroying tunnel object...", tun->id);
 	
@@ -226,12 +236,9 @@ int tunnel_destroy(struct tunnel *tun)
 	
 	//Let's make sure any remaining pipes are closed.
 	if(!stdpipes_close_remaining(tun->pipe_stdin, tun->pipe_stdout, tun->pipe_stderr))
-		{
 		logline(LOG_WARNING, TUNNEL_MODULE "stdpipes_close_remaining() returned an error!", tun->id);
-		}
 	
 	free(tun);
-	return TRUE;
 	}
 
 int tunnel_process_launch(struct tunnel *tun)
@@ -316,6 +323,8 @@ int tunnel_process_launch(struct tunnel *tun)
 		exit(1);
 		}
 	
+	logline(LOG_INFO, TUNNEL_MODULE "Child process launched with PID %d", tun->id, tun->pid);
+	
 	return TRUE;
 	}
 
@@ -328,11 +337,11 @@ int tunnel_check_stderr(int fd, char *logline_prefix)
 	
 	while(!done)
 		{
-		if(buf_pos >= buf_len)
+		if((buf_pos + 1) >= buf_len)
 			{
 			//We need to increase the size of the buffer.
 			buf_len = buf_len + STRING_BUFFER_ALLOCSTEP;
-			if((buf = realloc(buf, buf_len)) == NULL)
+			if((buf = realloc(buf, buf_len * sizeof(char))) == NULL)
 				{
 				logline(LOG_ERROR, "out of memory!");
 				free(buf);
@@ -387,14 +396,14 @@ int tunnel_check_stderr(int fd, char *logline_prefix)
 		if(buf[loopa] == '\n')
 			{
 			buf_sub[loopb] = '\0'; //Null-terminate the string.
-			logline(LOG_WARNING, "%s%s", logline_prefix, buf_sub);
+			logline(LOG_INFO, "%s%s", logline_prefix, buf_sub);
 			loopb = 0;
 			}
 		}
 	if(loopb > 0)
 		{
 		buf_sub[loopb] = '\0'; //Null-terminate the string.
-		logline(LOG_WARNING, "%s%s", logline_prefix, buf_sub);
+		logline(LOG_INFO, "%s%s", logline_prefix, buf_sub);
 		}
 	
 	free(buf);

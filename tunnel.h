@@ -34,7 +34,7 @@ struct tunnel
 
 struct tunnel *tunnel_create(char **argv, char **envp, int uptoken_enabled);
 int tunnel_maintenance(struct tunnel *tun);
-int tunnel_destroy(struct tunnel *tun);
+void tunnel_destroy(struct tunnel *tun);
 int tunnel_process_launch(struct tunnel *tun);
 int tunnel_check_stderr(int fd, char *logline_prefix);
 

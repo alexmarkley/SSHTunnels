@@ -198,3 +198,26 @@ int fd_set_nonblock(int fd)
 	return TRUE;
 	}
 
+void *list_grow_insert(void *ptr, void *new_member, size_t member_size, int *list_len, int *list_pos)
+	{
+	size_t old_len;
+	//Add a member to the end of a list. Will optionally grow the list.
+	//Make sure we always have at least one additional slot at the end of the list for NULL-termination.
+	while((*list_pos + 1) >= *list_len)
+		{
+		old_len = *list_len;
+		*list_len = *list_len + LIST_GROW_STEP;
+		if((ptr = realloc(ptr, member_size * (*list_len))) == NULL)
+			{
+			return ptr;
+			}
+		//Zero out the newly-allocated bytes at the end of the list.
+		memset((uint8_t *)ptr + ((size_t)member_size * (size_t)old_len), 0, ((size_t)member_size * (size_t)(*list_len)) - ((size_t)member_size * (size_t)old_len));
+		}
+	//Copy the new member into the list slot indicated by list_pos.
+	memcpy((uint8_t *)ptr + ((size_t)member_size * (size_t)(*list_pos)), new_member, member_size);
+	//Increment list_pos for next time.
+	*list_pos = *list_pos + 1;
+	return ptr;
+	}
+

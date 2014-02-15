@@ -3,8 +3,8 @@ TOOL_NAME=SSHTunnels
 
 TOOL_OBJECTS=main.o log.o util.o tunnel.o
 
-CFLAGS+=-Wall -O2 -g
-LDFLAGS+=-Wall -lm
+CFLAGS+=-Wall -O0 -g `pkg-config --cflags expat`
+LDFLAGS+=-Wall -lm `pkg-config --libs expat`
 
 all: $(TOOL_NAME)
 	@echo All Done

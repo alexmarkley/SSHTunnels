@@ -10,6 +10,16 @@
 #include "main.h"
 #include "log.h"
 
+FILE *logoutput(FILE *replace)
+	{
+	static FILE *out = NULL;
+	if(out == NULL)
+		out = LOG_DEFAULT_OUT;
+	if(replace != NULL)
+		out = replace;
+	return out;
+	}
+
 void logline(int type, char *message_format, ...)
 	{
 	int loopa, loopb, freeable = 1, bufferlen = LOG_BUFFERLEN_STEP, formatting, ret;
@@ -86,17 +96,17 @@ void logline(int type, char *message_format, ...)
 		switch(type)
 			{
 			case LOG_INFO:
-				fprintf(LOG_OUT, APP_SHORT_NAME ": Info: %s\n", buffer);
+				fprintf(logoutput(NULL), APP_SHORT_NAME ": Info: %s\n", buffer);
 				break;
 			case LOG_WARNING:
-				fprintf(LOG_OUT, APP_SHORT_NAME ": Warning: %s\n", buffer);
+				fprintf(logoutput(NULL), APP_SHORT_NAME ": Warning: %s\n", buffer);
 				break;
 			case LOG_ERROR:
-				fprintf(LOG_OUT, APP_SHORT_NAME ": Error: %s\n", buffer);
+				fprintf(logoutput(NULL), APP_SHORT_NAME ": Error: %s\n", buffer);
 				break;
 			default:
 				logline(LOG_WARNING, "Internal Program Error: Somebody sent a message without a valid message type! The errant message follows:");
-				fprintf(LOG_OUT, APP_SHORT_NAME ": Unknown Notice: %s\n", buffer);
+				fprintf(logoutput(NULL), APP_SHORT_NAME ": Unknown Notice: %s\n", buffer);
 				break;
 			}
 		}
