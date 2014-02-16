@@ -30,6 +30,11 @@
 #define XMLBUFFERSIZE 512
 #define LIST_GROW_STEP 8
 #define XMLPARSER "XML Config Parser: "
+#define CONFIG_FILENAME "SSHTunnels_config.xml"
+
+#ifndef PREFIX
+#define PREFIX "/usr/local"
+#endif
 
 #define __SSHTUNNELS_MAIN_H
 #endif

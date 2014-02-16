@@ -100,7 +100,7 @@ int read_configuration(char **defenvp)
 	{
 	XML_Parser parser;
 	int done = 0, i = 0, length;
-	char *config_filename[] = { "./SSHTunnels_config.xml", "/usr/local/etc/SSHTunnels_config.xml", "/etc/SSHTunnels_config.xml", NULL };
+	char *config_filename[] = { "./" CONFIG_FILENAME, PREFIX "/etc/" CONFIG_FILENAME, "/etc/" CONFIG_FILENAME, NULL };
 	char filebuffer[XMLBUFFERSIZE];
 	FILE *in = NULL;
 	struct sshtunnels_configstate state;
@@ -135,14 +135,13 @@ int read_configuration(char **defenvp)
 	XML_SetUserData(parser, (void *)&state);
 	
 	//Open config XML file for reading. (Try a couple of different file paths.)
-	while(!in && config_filename[i])
-		{
+	for(i = 0;config_filename[i] && !in; i++)
 		in = fopen(config_filename[i], "rb");
-		i++;
-		}
 	if(!in)
 		{
-		logline(LOG_ERROR, "Failed to find SSHTunnels_config.xml in the usual locations!");
+		logline(LOG_ERROR, "Failed to open " CONFIG_FILENAME);
+		for(i = 0; config_filename[i]; i++)
+			logline(LOG_ERROR, "Tried: %s", config_filename[i]);
 		return FALSE;
 		}
 	

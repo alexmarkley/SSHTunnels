@@ -3,7 +3,10 @@ TOOL_NAME=SSHTunnels
 
 TOOL_OBJECTS=main.o log.o util.o tunnel.o
 
-CFLAGS+=-Wall -O0 -g `pkg-config --cflags expat`
+#The installation prefix can be set at built time to indicate where SSHTunnels should look for a configuration file.
+PREFIX=/usr/local
+
+CFLAGS+=-Wall -O2 `pkg-config --cflags expat` -DPREFIX=\"$(PREFIX)\"
 LDFLAGS+=-Wall -lm `pkg-config --libs expat`
 
 all: $(TOOL_NAME)
