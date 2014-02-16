@@ -29,8 +29,6 @@ struct tunnel
 
 #define TUNNEL_TROUBLEMAX 8
 #define TUNNEL_TROUBLERESETTIME 300
-#define TUNNEL_UPTOKENWAITTIME 15
-#define TUNNEL_UPTOKENBUFFERSIZE 8 //Don't change this.
 
 struct tunnel *tunnel_create(char **argv, char **envp, int uptoken_enabled);
 int tunnel_maintenance(struct tunnel *tun);

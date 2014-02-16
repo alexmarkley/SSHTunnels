@@ -1,21 +1,26 @@
 
-TOOL_NAME=SSHTunnels
+TOOLS=SSHTunnels UpTokenReceiver
 
-TOOL_OBJECTS=main.o log.o util.o tunnel.o
+SSHTUNNELS_OBJECTS=main.o log.o util.o tunnel.o
+UPTOKENRECEIVER_OBJECTS=receiver.o log.o util.o
 
 #The installation prefix can be set at built time to indicate where SSHTunnels should look for a configuration file.
 PREFIX=/usr/local
 
 CFLAGS+=-Wall -O2 `pkg-config --cflags expat` -DPREFIX=\"$(PREFIX)\"
-LDFLAGS+=-Wall -lm `pkg-config --libs expat`
+SSHTUNNELS_LDFLAGS=-Wall -lm `pkg-config --libs expat`
+UPTOKENRECEIVER_LDFLAGS=-Wall
 
-all: $(TOOL_NAME)
+all: $(TOOLS)
 	@echo All Done
 
-$(TOOL_NAME): $(TOOL_OBJECTS)
-	$(CC) $(LDFLAGS) -o $(TOOL_NAME) $(TOOL_OBJECTS)
+SSHTunnels: $(SSHTUNNELS_OBJECTS)
+	$(CC) $(LDFLAGS) $(SSHTUNNELS_LDFLAGS) -o SSHTunnels $(SSHTUNNELS_OBJECTS)
+
+UpTokenReceiver: $(UPTOKENRECEIVER_OBJECTS)
+	$(CC) $(LDFLAGS) $(UPTOKENRECEIVER_LDFLAGS) -o UpTokenReceiver $(UPTOKENRECEIVER_OBJECTS)
 
 clean:
-	rm -f SSHTunnels *.o
+	rm -f $(TOOLS) *.o
 
 

@@ -25,6 +25,8 @@
 
 #define MAIN_SLEEP_SECONDS_DEFAULT 5
 #define UPTOKEN_ENABLED_DEFAULT TRUE
+#define UPTOKEN_WAIT_DEFAULT 15
+#define UPTOKEN_BUFFER_SIZE 8 //Don't change this.
 
 #define APP_SHORT_NAME "sshtunnels"
 #define XMLBUFFERSIZE 512

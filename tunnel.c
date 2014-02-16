@@ -58,7 +58,7 @@ int tunnel_maintenance(struct tunnel *tun)
 	static int srand_seeded = FALSE;
 	int tunnel_status;
 	pid_t waitpid_return;
-	char logline_prefix[128], uptoken_string[TUNNEL_UPTOKENBUFFERSIZE];
+	char logline_prefix[128], uptoken_string[UPTOKEN_BUFFER_SIZE];
 	time_t now, launchdelay_seconds;
 	float rnum;
 	ssize_t ioret;
@@ -136,11 +136,11 @@ int tunnel_maintenance(struct tunnel *tun)
 					tun->uptoken_sent = now;
 					}
 				}
-			else if(now >= (tun->uptoken_sent + TUNNEL_UPTOKENWAITTIME)) //We have previously sent an uptoken. Has the uptoken wait time elapsed?
+			else if(now >= (tun->uptoken_sent + UPTOKEN_WAIT_DEFAULT)) //We have previously sent an uptoken. Has the uptoken wait time elapsed?
 				{
 				//Check the pipe for a reply from the far end. The first byte should exactly match our uptoken.
-				memset(uptoken_string, 0, TUNNEL_UPTOKENBUFFERSIZE);
-				ioret = read_all(tun->pipe_stdout[PIPE_READ], uptoken_string, (TUNNEL_UPTOKENBUFFERSIZE - 1));
+				memset(uptoken_string, 0, UPTOKEN_BUFFER_SIZE);
+				ioret = read_all(tun->pipe_stdout[PIPE_READ], uptoken_string, (UPTOKEN_BUFFER_SIZE - 1));
 				if(ioret == -1 && errno != EAGAIN && errno != EWOULDBLOCK)
 					{
 					logline(LOG_ERROR, TUNNEL_MODULE "uptoken read() failed! (%s)", tun->id, strerror(errno));
