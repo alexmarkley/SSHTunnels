@@ -52,7 +52,12 @@ ssize_t read_all(int fd, void *buf, size_t count)
 		buftmp = buf + bufpos;
 		readret = read(fd, buftmp, count - bufpos);
 		if(readret < 1) //read() returns -1 on errors and 0 on things like EOF.
-			return readret;
+			{
+			if(bufpos > 0) //Did we already read some bytes?
+				return bufpos;
+			else //No bytes read. :(
+				return readret;
+			}
 		//Read at least one byte. Proceed.
 		bufpos = bufpos + readret;
 		}
