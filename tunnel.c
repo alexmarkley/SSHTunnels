@@ -173,10 +173,10 @@ int tunnel_maintenance(struct tunnel *tun)
 			//Did we run into trouble that would require us to send a signal to the child process?
 			if(tun->uptoken_condemned)
 				{
-				logline(LOG_WARNING, TUNNEL_MODULE "uptoken condemned tunnel process %d. Sending SIGKILL...", tun->id, tun->pid);
-				if(kill(tun->pid, SIGKILL) == -1)
+				logline(LOG_WARNING, TUNNEL_MODULE "uptoken condemned tunnel process %d. Sending SIGTERM...", tun->id, tun->pid);
+				if(kill(tun->pid, SIGTERM) == -1)
 					{
-					logline(LOG_WARNING, TUNNEL_MODULE "kill(%d, SIGKILL) failed! (%s)", tun->id, tun->pid, strerror(errno));
+					logline(LOG_WARNING, TUNNEL_MODULE "kill(%d, SIGTERM) failed! (%s)", tun->id, tun->pid, strerror(errno));
 					}
 				}
 			}
@@ -222,10 +222,10 @@ void tunnel_destroy(struct tunnel *tun)
 	//Let's make sure the child process is dead.
 	if(tun->pid > 0)
 		{
-		logline(LOG_INFO, TUNNEL_MODULE "Process %d still running. Sending SIGKILL...", tun->id, tun->pid);
-		if(kill(tun->pid, SIGKILL) == -1)
+		logline(LOG_INFO, TUNNEL_MODULE "Process %d still running. Sending SIGTERM...", tun->id, tun->pid);
+		if(kill(tun->pid, SIGTERM) == -1)
 			{
-			logline(LOG_WARNING, TUNNEL_MODULE "kill(%d, SIGKILL) failed! (%s)", tun->id, tun->pid, strerror(errno));
+			logline(LOG_WARNING, TUNNEL_MODULE "kill(%d, SIGTERM) failed! (%s)", tun->id, tun->pid, strerror(errno));
 			}
 		else
 			{
