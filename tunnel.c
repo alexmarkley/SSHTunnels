@@ -14,7 +14,7 @@
 
 #define TUNNEL_MODULE "tunnel %d: "
 
-struct tunnel *tunnel_create(char **argv, char **envp, int uptoken_enabled)
+struct tunnel *tunnel_create(char **argv, char **envp, int uptoken_enabled, time_t uptoken_interval)
 	{
 	static int nextid = 1;
 	struct tunnel *newtun = NULL;
@@ -43,11 +43,12 @@ struct tunnel *tunnel_create(char **argv, char **envp, int uptoken_enabled)
 	newtun->pipe_stderr[PIPE_READ] = -1;
 	newtun->pipe_stderr[PIPE_WRITE] = -1;
 	newtun->uptoken_enabled = uptoken_enabled;
-	newtun->uptoken_condemned = FALSE;
+	newtun->uptoken_interval = uptoken_interval;
 	newtun->uptoken = -1;
 	newtun->uptoken_sent = 0;
 	newtun->trouble = 0;
 	newtun->trouble_launchnext = 0;
+	newtun->condemned = FALSE;
 	
 	nextid++;
 	return newtun;
@@ -92,14 +93,14 @@ int tunnel_maintenance(struct tunnel *tun)
 	if(tun->pipe_stderr[PIPE_READ] != -1)
 		{
 		sprintf(logline_prefix, TUNNEL_MODULE "stderr: ", tun->id);
-		tunnel_check_stderr(tun->pipe_stderr[PIPE_READ], logline_prefix);
+		tunnel_check_stderr(tun->pipe_stderr[PIPE_READ], logline_prefix, tun);
 		}
 	
 	//If we're not using STDOUT for UpToken, we should check that for messages we need to report.
 	if(!tun->uptoken_enabled && tun->pipe_stdout[PIPE_READ] != -1)
 		{
 		sprintf(logline_prefix, TUNNEL_MODULE "stdout: ", tun->id);
-		tunnel_check_stderr(tun->pipe_stdout[PIPE_READ], logline_prefix);
+		tunnel_check_stderr(tun->pipe_stdout[PIPE_READ], logline_prefix, tun);
 		}
 	
 	//We DO have a PID. Child process should be running.
@@ -113,30 +114,9 @@ int tunnel_maintenance(struct tunnel *tun)
 			}
 		
 		//Uptoken stuff gets handled here too.
-		if(tun->uptoken_enabled && !tun->uptoken_condemned && tun->pipe_stdin[PIPE_WRITE] >= 0 && tun->pipe_stdout[PIPE_READ] >= 0)
+		if(tun->uptoken_enabled && !tun->condemned && tun->pipe_stdin[PIPE_WRITE] >= 0 && tun->pipe_stdout[PIPE_READ] >= 0)
 			{
-			if(tun->uptoken < 0) //We have not yet sent an uptoken.
-				{
-				//Choose an uptoken. (ASCII 33-126)
-				rnum = (float)rand() / (float)RAND_MAX;
-				rnum = roundf(rnum * 93.0);
-				tun->uptoken = (char)rnum + (char)33;
-				sprintf(uptoken_string, "%c\n", tun->uptoken);
-				if((ioret = write_all(tun->pipe_stdin[PIPE_WRITE], uptoken_string, strlen(uptoken_string))) != strlen(uptoken_string))
-					{
-					if(ioret == -1)
-						logline(LOG_ERROR, TUNNEL_MODULE "uptoken write() failed! (%s)", tun->id, strerror(errno));
-					else //Couldn't write enough bytes, but no reported error.
-						logline(LOG_ERROR, TUNNEL_MODULE "uptoken write() failed for unknown reason!", tun->id);
-					tun->uptoken_condemned = TRUE; //Mark this tunnel process as condemned by the uptoken system.
-					}
-				else //Uptoken sent!
-					{
-					//logline(LOG_INFO, TUNNEL_MODULE "uptoken (%c) sent to far end.", tun->id, tun->uptoken);
-					tun->uptoken_sent = now;
-					}
-				}
-			else if(now >= (tun->uptoken_sent + UPTOKEN_WAIT_DEFAULT)) //We have previously sent an uptoken. Has the uptoken wait time elapsed?
+			if(tun->uptoken > 0 && now >= (tun->uptoken_sent + tun->uptoken_interval)) //We have previously sent an uptoken. Has the uptoken wait time elapsed?
 				{
 				//Check the pipe for a reply from the far end. The first byte should exactly match our uptoken.
 				memset(uptoken_string, 0, UPTOKEN_BUFFER_SIZE);
@@ -144,13 +124,13 @@ int tunnel_maintenance(struct tunnel *tun)
 				if(ioret == -1 && errno != EAGAIN && errno != EWOULDBLOCK)
 					{
 					logline(LOG_ERROR, TUNNEL_MODULE "uptoken read() failed! (%s)", tun->id, strerror(errno));
-					tun->uptoken_condemned = TRUE; //Mark this tunnel process as condemned by the uptoken system.
+					tun->condemned = TRUE; //Mark this tunnel process as condemned by the uptoken system.
 					}
 				else if(strlen(uptoken_string) < 2) //No error reported by read(), but still didn't get enough bytes.
 					{
 					logline(LOG_WARNING, TUNNEL_MODULE "uptoken read() didn't return enough bytes! uptoken did not come back.", tun->id);
 					//logline(LOG_INFO, TUNNEL_MODULE "Details: (%d, %d, \"%s\")", tun->id, ioret, strlen(uptoken_string), uptoken_string);
-					tun->uptoken_condemned = TRUE; //Mark this tunnel process as condemned by the uptoken system.
+					tun->condemned = TRUE; //Mark this tunnel process as condemned by the uptoken system.
 					}
 				else //We did get enough bytes.
 					{
@@ -165,19 +145,41 @@ int tunnel_maintenance(struct tunnel *tun)
 						{
 						//Oh dear! We got something unexpected back from the far end.
 						logline(LOG_WARNING, TUNNEL_MODULE "uptoken does not match! The far end sent something strange.", tun->id);
-						tun->uptoken_condemned = TRUE; //Mark this tunnel process as condemned by the uptoken system.
+						tun->condemned = TRUE; //Mark this tunnel process as condemned by the uptoken system.
 						}
 					}
 				}
 			
-			//Did we run into trouble that would require us to send a signal to the child process?
-			if(tun->uptoken_condemned)
+			if(tun->uptoken < 0) //We have not yet sent an uptoken. (Or uptoken just came back.)
 				{
-				logline(LOG_WARNING, TUNNEL_MODULE "uptoken condemned tunnel process %d. Sending SIGTERM...", tun->id, tun->pid);
-				if(kill(tun->pid, SIGTERM) == -1)
+				//Choose an uptoken. (ASCII 33-126)
+				rnum = (float)rand() / (float)RAND_MAX;
+				rnum = roundf(rnum * 93.0);
+				tun->uptoken = (char)rnum + (char)33;
+				sprintf(uptoken_string, "%c\n", tun->uptoken);
+				if((ioret = write_all(tun->pipe_stdin[PIPE_WRITE], uptoken_string, strlen(uptoken_string))) != strlen(uptoken_string))
 					{
-					logline(LOG_WARNING, TUNNEL_MODULE "kill(%d, SIGTERM) failed! (%s)", tun->id, tun->pid, strerror(errno));
+					if(ioret == -1)
+						logline(LOG_ERROR, TUNNEL_MODULE "uptoken write() failed! (%s)", tun->id, strerror(errno));
+					else //Couldn't write enough bytes, but no reported error.
+						logline(LOG_ERROR, TUNNEL_MODULE "uptoken write() failed for unknown reason!", tun->id);
+					tun->condemned = TRUE; //Mark this tunnel process as condemned by the uptoken system.
 					}
+				else //Uptoken sent!
+					{
+					//logline(LOG_INFO, TUNNEL_MODULE "uptoken (%c) sent to far end.", tun->id, tun->uptoken);
+					tun->uptoken_sent = now;
+					}
+				}
+			}
+		
+		//Did we run into trouble that would require us to send a signal to the child process?
+		if(tun->condemned)
+			{
+			logline(LOG_WARNING, TUNNEL_MODULE "Tunnel process %d condemned. Sending SIGTERM...", tun->id, tun->pid);
+			if(kill(tun->pid, SIGTERM) == -1)
+				{
+				logline(LOG_WARNING, TUNNEL_MODULE "kill(%d, SIGTERM) failed! (%s)", tun->id, tun->pid, strerror(errno));
 				}
 			}
 		
@@ -193,7 +195,6 @@ int tunnel_maintenance(struct tunnel *tun)
 			logline(LOG_WARNING, TUNNEL_MODULE "Child process exited with status %d!", tun->id, WEXITSTATUS(tunnel_status));
 			tun->pid = 0; //No more PID.
 			tun->uptoken = -1; //Clear uptoken too.
-			tun->uptoken_condemned = FALSE;
 			//If the child process dies for any reason, the trouble level goes up. (Up to TUNNEL_TROUBLEMAX)
 			if(tun->trouble < TUNNEL_TROUBLEMAX)
 				tun->trouble = tun->trouble + 1;
@@ -246,6 +247,9 @@ int tunnel_process_launch(struct tunnel *tun)
 	int i = 0, wrote;
 	size_t launchstring_len = 0;
 	char *launchstring = NULL, *launchstring_tmp;
+	
+	//Make sure newly-created process is not condemned out of the gate.
+	tun->condemned = FALSE;
 	
 	//For logging purposes, we'll generate a launchstring.
 	while(tun->argv[i] != NULL)
@@ -328,12 +332,12 @@ int tunnel_process_launch(struct tunnel *tun)
 	return TRUE;
 	}
 
-int tunnel_check_stderr(int fd, char *logline_prefix)
+int tunnel_check_stderr(int fd, char *logline_prefix, struct tunnel *tun)
 	{
 	char *buf = NULL, *buf_temp, *buf_sub;
 	size_t buf_len = 0, buf_pos = 0;
 	ssize_t readret;
-	int done = FALSE, loopa = 0, loopb = 0;
+	int done = FALSE, i = 0, j = 0;
 	
 	while(!done)
 		{
@@ -349,7 +353,7 @@ int tunnel_check_stderr(int fd, char *logline_prefix)
 				}
 			}
 		buf_temp = buf + buf_pos;
-		readret = read(fd, buf_temp, buf_len - buf_pos);
+		readret = read_all(fd, buf_temp, buf_len - buf_pos);
 		if(readret > 0)
 			{
 			buf_pos = buf_pos + readret;
@@ -385,25 +389,27 @@ int tunnel_check_stderr(int fd, char *logline_prefix)
 		return -1;
 		}
 	
-	//Scan through the buffer, outputting each line.
-	for(loopa = 0; loopa < buf_pos; loopa++)
+	//Scan through the buffer, outputting each line and scanning for "magic words".
+	for(i = 0; i < buf_pos; i++)
 		{
 		//Copy the character over.
-		buf_sub[loopb] = buf[loopa];
-		loopb++;
+		buf_sub[j] = buf[i];
+		j++;
 		
 		//Check for a new line character.
-		if(buf[loopa] == '\n')
+		if(buf[i] == '\n')
 			{
-			buf_sub[loopb] = '\0'; //Null-terminate the string.
+			buf_sub[j] = '\0'; //Null-terminate the string.
 			logline(LOG_INFO, "%s%s", logline_prefix, buf_sub);
-			loopb = 0;
+			tunnel_check_magic_words(buf_sub, tun);
+			j = 0;
 			}
 		}
-	if(loopb > 0)
+	if(j > 0)
 		{
-		buf_sub[loopb] = '\0'; //Null-terminate the string.
+		buf_sub[j] = '\0'; //Null-terminate the string.
 		logline(LOG_INFO, "%s%s", logline_prefix, buf_sub);
+		tunnel_check_magic_words(buf_sub, tun);
 		}
 	
 	free(buf);
@@ -411,5 +417,23 @@ int tunnel_check_stderr(int fd, char *logline_prefix)
 	return TRUE;
 	}
 
-
+void tunnel_check_magic_words(char *line, struct tunnel *tun)
+	{
+	int i, j, len;
+	char *magic_words[] = { "port forwarding failed", "combat check failed", NULL };
+	
+	//Now search for magic words.
+	for(i = 0; magic_words[i]; i++)
+		{
+		len = strlen(magic_words[i]);
+		for(j = 0; line[j]; j++)
+			{
+			if(strlen(line + j) >= len && strncasecmp(line + j, magic_words[i], len) == 0)
+				{
+				logline(LOG_ERROR, TUNNEL_MODULE "Magic words \"%s\" discovered in tunnel output!", tun->id, magic_words[i]);
+				tun->condemned = TRUE;
+				}
+			}
+		}
+	}
 

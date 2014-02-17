@@ -72,7 +72,7 @@ int main(int argc, char **argv)
 			}
 		
 		//Check the time. If it has been too long since we heard from the far end, we'll set up = FALSE;
-		if(now > (last_uptoken + UPTOKEN_WAIT_DEFAULT))
+		if(now > (last_uptoken + UPTOKEN_INTERVAL_DEFAULT))
 			{
 			logline(LOG_ERROR, RECEIVER "Timeout waiting for UpToken!");
 			up = FALSE;

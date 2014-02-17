@@ -23,6 +23,7 @@ struct sshtunnels_configstate
 	char **newargv, **newenvp, **defenvp;
 	int newargv_len, newargv_pos, newenvp_len, newenvp_pos;
 	int uptoken_enabled;
+	time_t uptoken_interval;
 	};
 
 int main_finished = FALSE;
@@ -32,6 +33,7 @@ struct tunnel **main_tunnels = NULL;
 int main_tunnels_len = 0, main_tunnels_pos = 0;
 
 void termination_handler(int signum);
+void brokenpipe_handler(int signum);
 int read_configuration(char **defenvp);
 void tagstart(void *data, const char *name, const char **attributes);
 void tagend(void *data, const char *name);
@@ -64,6 +66,9 @@ int main(int argc, char **argv, char **envp)
 		logline(LOG_WARNING, "Registering of SIGHUP signal handler failed. (%s)", strerror(errno));
 	if(sigaction(SIGTERM, &sigact, NULL) != 0)
 		logline(LOG_WARNING, "Registering of SIGTERM signal handler failed. (%s)", strerror(errno));
+	sigact.sa_handler = brokenpipe_handler;
+	if(sigaction(SIGPIPE, &sigact, NULL) != 0)
+		logline(LOG_WARNING, "Registering of SIGPIPE signal handler failed. (%s)", strerror(errno));
 	
 	while(!main_finished)
 		{
@@ -72,6 +77,7 @@ int main(int argc, char **argv, char **envp)
 			{
 			if(!tunnel_maintenance(main_tunnels[i]))
 				{
+				logline(LOG_ERROR, "FATAL! tunnel_maintenance() returned with an error.");
 				main_finished = TRUE;
 				error = TRUE;
 				}
@@ -94,6 +100,11 @@ void termination_handler(int signum)
 	{
 	logline(LOG_INFO, "Caught signal %d.", signum);
 	main_finished = TRUE;
+	}
+
+void brokenpipe_handler(int signum)
+	{
+	logline(LOG_WARNING, "Caught SIGPIPE (%d). Ignoring...", signum);
 	}
 
 int read_configuration(char **defenvp)
@@ -123,6 +134,7 @@ int read_configuration(char **defenvp)
 	state.newenvp_pos = 0;
 	state.defenvp = defenvp;
 	state.uptoken_enabled = UPTOKEN_ENABLED_DEFAULT;
+	state.uptoken_interval = UPTOKEN_INTERVAL_DEFAULT;
 	
 	//Set up XML parser for configuration
 	if(!(parser = XML_ParserCreate(NULL)))
@@ -244,6 +256,7 @@ void tagstart(void *data, const char *name, const char **attributes)
 					state->in_tunnel = TRUE;
 					state->seen_tunnel = TRUE;
 					state->uptoken_enabled = UPTOKEN_ENABLED_DEFAULT;
+					state->uptoken_interval = UPTOKEN_INTERVAL_DEFAULT;
 					state->newargv = NULL;
 					state->newargv_len = 0;
 					state->newargv_pos = 0;
@@ -276,6 +289,22 @@ void tagstart(void *data, const char *name, const char **attributes)
 								state->failed = TRUE;
 								return;
 								}
+							}
+						else if(strcmp(attributes[i], "UpTokenInterval") == 0)
+							{
+							if(sscanf(attributes[i+1], "%d", &j) != 1)
+								{
+								logline(LOG_ERROR, XMLPARSER "UpTokenInterval must be an integer! Line: %d", (int)XML_GetCurrentLineNumber(parser));
+								state->failed = TRUE;
+								return;
+								}
+							if(j < 1 || j > 60)
+								{
+								logline(LOG_ERROR, XMLPARSER "UpTokenInterval must be a positive integer between 1 and 60. Line: %d", (int)XML_GetCurrentLineNumber(parser));
+								state->failed = TRUE;
+								return;
+								}
+							state->uptoken_interval = (time_t)j;
 							}
 						}
 					}
@@ -371,6 +400,7 @@ void tagstart(void *data, const char *name, const char **attributes)
 
 void tagend(void *data, const char *name)
 	{
+	time_t interval;
 	XML_Parser parser = (XML_Parser)data;
 	struct sshtunnels_configstate *state = (struct sshtunnels_configstate *)XML_GetUserData(parser);
 	struct tunnel *mytun;
@@ -399,8 +429,18 @@ void tagend(void *data, const char *name)
 			
 			logline(LOG_INFO, XMLPARSER "Parsed <Tunnel> declaration with %d <ProgramArgument> tag(s) and %d <ProgramEnvironment> tag(s).", state->count_programargument, state->count_programenvironment);
 			
+			//Normalize interval.
+			if(state->uptoken_interval % main_sleep_seconds != 0)
+				{
+				interval = ((state->uptoken_interval / main_sleep_seconds) + 1) * main_sleep_seconds;
+				if(interval > 60)
+					interval = main_sleep_seconds;
+				logline(LOG_WARNING, "UpToken Interval of %d is not evenly divisible by the main Sleep Timer, which is set to %d. Using UpToken Interval of %d instead.", (int)state->uptoken_interval, (int)main_sleep_seconds, (int)interval);
+				state->uptoken_interval = interval;
+				}
+			
 			//Handle tunnel object creation.
-			if((mytun = tunnel_create(state->newargv, state->newenvp, state->uptoken_enabled)) == NULL)
+			if((mytun = tunnel_create(state->newargv, state->newenvp, state->uptoken_enabled, state->uptoken_interval)) == NULL)
 				{
 				logline(LOG_ERROR, "Tunnel object creation failed!");
 				state->failed = TRUE;
