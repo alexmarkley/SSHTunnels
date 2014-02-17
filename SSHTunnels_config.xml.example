@@ -22,7 +22,8 @@
     <Tunnel>
       - XML tag representing a tunnel process.
       - Attributes:
-          UpTokenEnabled (optional, defaults to TRUE) should be true or false. If true, we will send characters to the Tunnel process's STDIN and look for them to come back via the Tunnel process's STDOUT. This behavior is most useful if you are logging into a remote system with ssh and executing tee.
+          UpTokenEnabled (optional, defaults to TRUE) should be true or false. If true, we will send characters to the Tunnel process's STDIN and look for them to come back via the Tunnel process's STDOUT. This requires the far end to be running the UpTokenReceiver binary.
+          UpTokenInterval (optional, defaults to 15) is roughly the number of seconds between uptokens.
     
     <ProgramArgument>
       - Represents an argument to the tunnel process. The first argument must be the full path to the executable program being launched! This is exactly equivalent to the argv which is passed to execve. See man 2 execve for details.
@@ -36,13 +37,15 @@
 
 -->
 <SSHTunnels LogOutput="stderr" SleepTimer="5">
-	<Tunnel UpTokenEnabled="true">
-		<ProgramArgument v="/usr/bin/tee" />
+	<Tunnel UpTokenEnabled="true" UpTokenInterval="5">
+		<ProgramArgument v="/bin/sh" />
+		<ProgramArgument v="-c" />
+		<ProgramArgument v="./UpTokenReceiver" />
 	</Tunnel>
 	<Tunnel UpTokenEnabled="true">
 		<ProgramArgument v="/usr/bin/ssh" />
 		<ProgramArgument v="elbmin" />
-		<ProgramArgument v="tee" />
+		<ProgramArgument v="UpTokenReceiver" />
 	</Tunnel>
 	<Tunnel UpTokenEnabled="false">
 		<ProgramEnvironment v="WORLD=Earth" />

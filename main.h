@@ -26,9 +26,12 @@
 #define MAIN_SLEEP_SECONDS_DEFAULT 5
 #define UPTOKEN_ENABLED_DEFAULT TRUE
 #define UPTOKEN_INTERVAL_DEFAULT 15
+#define UPTOKEN_INTERVAL_GRACEPERIOD 5
 #define UPTOKEN_BUFFER_SIZE 8 //Don't change this.
+#define UPTOKEN_HEADER_BUFFER_SIZE 128 //Don't change this.
+#define UPTOKEN_HEADER_VERSION 1
+#define UPTOKEN_HEADER_FORMAT "HeaderVersion: %d; UpToken Interval: %d;\n"
 
-#define APP_SHORT_NAME "sshtunnels"
 #define XMLBUFFERSIZE 512
 #define LIST_GROW_STEP 8
 #define XMLPARSER "XML Config Parser: "

@@ -49,6 +49,8 @@ int main(int argc, char **argv, char **envp)
 	int i;
 	struct sigaction sigact;
 	
+	logname("SSHTunnels");
+	
 	//Read in the configuration or die.
 	if(!read_configuration(envp))
 		{

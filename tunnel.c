@@ -12,7 +12,7 @@
 #include "log.h"
 #include "util.h"
 
-#define TUNNEL_MODULE "tunnel %d: "
+#define TUNNEL_MODULE "Tunnel %d: "
 
 struct tunnel *tunnel_create(char **argv, char **envp, int uptoken_enabled, time_t uptoken_interval)
 	{
@@ -92,14 +92,14 @@ int tunnel_maintenance(struct tunnel *tun)
 	//Check STDERR for any messages from the child we need to report.
 	if(tun->pipe_stderr[PIPE_READ] != -1)
 		{
-		sprintf(logline_prefix, TUNNEL_MODULE "stderr: ", tun->id);
+		sprintf(logline_prefix, TUNNEL_MODULE "STDERR: ", tun->id);
 		tunnel_check_stderr(tun->pipe_stderr[PIPE_READ], logline_prefix, tun);
 		}
 	
 	//If we're not using STDOUT for UpToken, we should check that for messages we need to report.
 	if(!tun->uptoken_enabled && tun->pipe_stdout[PIPE_READ] != -1)
 		{
-		sprintf(logline_prefix, TUNNEL_MODULE "stdout: ", tun->id);
+		sprintf(logline_prefix, TUNNEL_MODULE "STDOUT: ", tun->id);
 		tunnel_check_stderr(tun->pipe_stdout[PIPE_READ], logline_prefix, tun);
 		}
 	
@@ -244,9 +244,10 @@ void tunnel_destroy(struct tunnel *tun)
 
 int tunnel_process_launch(struct tunnel *tun)
 	{
-	int i = 0, wrote;
+	int i = 0, wrote, uptoken_header_len;
 	size_t launchstring_len = 0;
 	char *launchstring = NULL, *launchstring_tmp;
+	char uptoken_header[UPTOKEN_HEADER_BUFFER_SIZE];
 	
 	//Make sure newly-created process is not condemned out of the gate.
 	tun->condemned = FALSE;
@@ -295,14 +296,14 @@ int tunnel_process_launch(struct tunnel *tun)
 		if(!stdpipes_close_far_end_child(tun->pipe_stdin, tun->pipe_stdout, tun->pipe_stderr))
 			{
 			logline(LOG_ERROR, TUNNEL_MODULE "stdpipes_close_far_end_child() returned an error!", tun->id);
-			return FALSE;
+			exit(1); //Child process must exit instead of returning.
 			}
 		
 		//In the child process we need to replace the standard pipes.
 		if(!stdpipes_replace(tun->pipe_stdin, tun->pipe_stdout, tun->pipe_stderr))
 			{
 			logline(LOG_ERROR, TUNNEL_MODULE "stdpipes_replace() returned an error!", tun->id);
-			return FALSE;
+			exit(1); //Child process must exit instead of returning.
 			}
 		
 		//Exec!
@@ -310,24 +311,38 @@ int tunnel_process_launch(struct tunnel *tun)
 		
 		//execve() only returns on error.
 		logline(LOG_ERROR, TUNNEL_MODULE "Call to execve() failed!", tun->id);
-		exit(1);
+		exit(1); //Child process must exit instead of returning.
 		}	
 	
 	//Close the "far" ends of the pipe between the parent and the child.
 	if(!stdpipes_close_far_end_parent(tun->pipe_stdin, tun->pipe_stdout, tun->pipe_stderr))
 		{
 		logline(LOG_ERROR, TUNNEL_MODULE "stdpipes_close_far_end_parent() returned an error!", tun->id);
-		exit(1);
+		return FALSE;
 		}
 	
 	//On the parent we must set O_NONBLOCK so we can query the pipes from the child without locking up ourselves.
 	if(!fd_set_nonblock(tun->pipe_stdout[PIPE_READ]) || !fd_set_nonblock(tun->pipe_stderr[PIPE_READ]))
 		{
 		logline(LOG_ERROR, TUNNEL_MODULE "fd_set_nonblock() returned an error!", tun->id);
-		exit(1);
+		return FALSE;
 		}
 	
 	logline(LOG_INFO, TUNNEL_MODULE "Child process launched with PID %d", tun->id, tun->pid);
+	
+	//If uptoken_enabled, we should send the uptoken header.
+	if(tun->uptoken_enabled)
+		{
+		snprintf(uptoken_header, UPTOKEN_HEADER_BUFFER_SIZE, UPTOKEN_HEADER_FORMAT, UPTOKEN_HEADER_VERSION, (int)tun->uptoken_interval);
+		uptoken_header_len = strlen(uptoken_header);
+		wrote = write_all(tun->pipe_stdin[PIPE_WRITE], uptoken_header, uptoken_header_len);
+		if(wrote < uptoken_header_len)
+			{
+			logline(LOG_ERROR, TUNNEL_MODULE "failed writing uptoken header!", tun->id);
+			return FALSE;
+			}
+		//logline(LOG_INFO, "Sent header: %s", uptoken_header);
+		}
 	
 	return TRUE;
 	}

@@ -34,6 +34,7 @@ enum
 #define LOG_BUFFERLEN_STEP 128
 
 FILE *logoutput(FILE *replace);
+char *logname(char *replace);
 void logline(int status, char *message_format, ...); //Now supports printf() format conversion.
 
 #define __SSHTUNNELS_LOG_H
