@@ -112,8 +112,8 @@ actually_build()
 		make clean 2> /dev/null
 		make distclean 2> /dev/null
 		setenv_arm $ARCH
-		./configure --prefix=$GLOBAL_OUTDIR --host=armv7s-apple-darwin --enable-shared=no
-		make
+		./configure --prefix=$GLOBAL_OUTDIR --host=arm-apple-darwin --enable-shared=no || exit
+		make || exit
 		cp -rvf $LIBDIR/lib*.a $OUTDIR/$ARCH
 		done
 	
