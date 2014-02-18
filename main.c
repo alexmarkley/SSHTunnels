@@ -13,6 +13,8 @@
 #include "tunnel.h"
 #include "log.h"
 
+#include <expat.h>
+
 struct sshtunnels_configstate
 	{
 	int failed;

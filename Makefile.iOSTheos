@@ -1,6 +1,16 @@
+ARCHS=armv7 armv7s arm64
+SDKVERSION=7.0
+TARGET=iphone:7.0
+
 include theos/makefiles/common.mk
 
-TOOL_NAME = SSHTunnels
-SSHTunnels_FILES = main.c log.c util.c
+TOOL_NAME=SSHTunnels UpTokenReceiver
+SSHTunnels_FILES=main.c log.c util.c tunnel.c
+UpTokenReceiver_FILES=receiver.c log.c util.c
+
+#SSHTunnels requires eXpat
+SSHTunnels_CFLAGS=`pkg-config --cflags expat`
+SSHTunnels_LDFLAGS=`pkg-config --libs expat`
 
 include $(THEOS_MAKE_PATH)/tool.mk
+

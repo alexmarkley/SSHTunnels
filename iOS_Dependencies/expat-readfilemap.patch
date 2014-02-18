@@ -1,0 +1,11 @@
+--- expat-2.1.0/xmlwf/readfilemap.c	2009-11-12 11:51:39.000000000 -0500
++++ expat-2.1.0_patched/xmlwf/readfilemap.c	2014-02-17 19:25:11.000000000 -0500
+@@ -8,6 +8,8 @@
+ #include <stdlib.h>
+ #include <stdio.h>
+ 
++#include <unistd.h>
++
+ #ifdef __WATCOMC__
+ #ifndef __LINUX__
+ #include <io.h>

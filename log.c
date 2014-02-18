@@ -117,6 +117,7 @@ void logline(int type, char *message_format, ...)
 				fprintf(logoutput(NULL), "%s: Unknown Notice: %s\n", logname(NULL), buffer);
 				break;
 			}
+		fflush(NULL);
 		}
 	
 	if(freeable) free(buffer);
