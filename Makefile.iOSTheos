@@ -1,6 +1,6 @@
 ARCHS=armv7 armv7s arm64
-SDKVERSION=7.0
-TARGET=iphone:7.0
+SDKVERSION=7.1
+TARGET=iphone:7.1
 
 include theos/makefiles/common.mk
 

@@ -3,7 +3,7 @@
 GLOBAL_OUTDIR="/opt/ios-libs"
 OUTDIR=`pwd`"/outdir_temp"
 
-IOS_BASE_SDK="7.0"
+IOS_BASE_SDK="7.1"
 IOS_DEPLOY_TGT="6.0"
 
 XCODE_ROOT=`xcode-select --print-path`
