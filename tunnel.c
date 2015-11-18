@@ -131,6 +131,7 @@ int tunnel_maintenance(struct tunnel *tun)
 		//Uptoken stuff gets handled here too.
 		if(tun->uptoken_enabled && !tun->condemned && tun->pipe_stdin[PIPE_WRITE] >= 0 && tun->pipe_stdout[PIPE_READ] >= 0)
 			{
+			//logline(LOG_INFO, TUNNEL_MODULE "uptoken: %d; now: %ld; sent: %ld; interval: %ld", tun->id, (int)tun->uptoken, now, tun->uptoken_sent, tun->uptoken_interval);
 			if(tun->uptoken > 0 && now >= (tun->uptoken_sent + tun->uptoken_interval)) //We have previously sent an uptoken. Has the uptoken wait time elapsed?
 				{
 				//Check the pipe for a reply from the far end. The first byte should exactly match our uptoken.
@@ -150,9 +151,9 @@ int tunnel_maintenance(struct tunnel *tun)
 				else //We did get enough bytes.
 					{
 					//Does the uptoken match?
-					if(uptoken_string[0] == tun->uptoken)
+					if(uptoken_string[0] == (char)tun->uptoken)
 						{
-						//logline(LOG_INFO, TUNNEL_MODULE "uptoken (%c) received from far end.", tun->id, tun->uptoken);
+						//logline(LOG_INFO, TUNNEL_MODULE "uptoken (%c) received from far end.", tun->id, (char)tun->uptoken);
 						//Okay! Forget this uptoken so we can pick a new one next round.
 						tun->uptoken = -1;
 						}
@@ -170,8 +171,8 @@ int tunnel_maintenance(struct tunnel *tun)
 				//Choose an uptoken. (ASCII 33-126)
 				rnum = (float)rand() / (float)RAND_MAX;
 				rnum = roundf(rnum * 93.0);
-				tun->uptoken = (char)rnum + (char)33;
-				sprintf(uptoken_string, "%c\n", tun->uptoken);
+				tun->uptoken = (signed char)rnum + (signed char)33;
+				sprintf(uptoken_string, "%c\n", (char)tun->uptoken);
 				if((ioret = write_all(tun->pipe_stdin[PIPE_WRITE], uptoken_string, strlen(uptoken_string))) != strlen(uptoken_string))
 					{
 					if(ioret == -1)
@@ -182,7 +183,7 @@ int tunnel_maintenance(struct tunnel *tun)
 					}
 				else //Uptoken sent!
 					{
-					//logline(LOG_INFO, TUNNEL_MODULE "uptoken (%c) sent to far end.", tun->id, tun->uptoken);
+					//logline(LOG_INFO, TUNNEL_MODULE "uptoken (%c) sent to far end.", tun->id, (char)tun->uptoken);
 					tun->uptoken_sent = now;
 					}
 				}
