@@ -20,7 +20,9 @@ SSHTunnels: $(SSHTUNNELS_OBJECTS)
 UpTokenReceiver: $(UPTOKENRECEIVER_OBJECTS)
 	$(CC) $(LDFLAGS) $(UPTOKENRECEIVER_OBJECTS) $(UPTOKENRECEIVER_LDFLAGS) -o UpTokenReceiver
 
+install: $(TOOLS)
+	install $(TOOLS) $(PREFIX)/bin/
+
 clean:
 	rm -f $(TOOLS) *.o
-
 
