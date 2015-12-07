@@ -1,5 +1,5 @@
 /*
- * SSHTunnels - A program for generating and maintaining SSH Tunnels
+ * SSHTunnels - A program for generating and maintaining SSH Tunnels.
  *
  * main.c
  *     - Daemon can run all the time.
@@ -46,6 +46,7 @@ struct sshtunnels_configstate
 int main_finished = FALSE;
 time_t main_sleep_seconds = MAIN_SLEEP_SECONDS_DEFAULT;
 FILE *log_output_file = NULL;
+int log_syslog_enabled = FALSE, log_syslog_force = FALSE;
 struct tunnel **main_tunnels = NULL;
 int main_tunnels_len = 0, main_tunnels_pos = 0;
 
@@ -58,6 +59,7 @@ char *insert_new_environment_variable(char ***newenvp, int *newenvp_len, int *ne
 void destroy_tunnel_argvenvp(struct tunnel *tun);
 void destroy_arglist(char **list);
 void destroy_alltunnels(void);
+void usage(void);
 
 int main(int argc, char **argv, char **envp)
 	{
@@ -66,7 +68,25 @@ int main(int argc, char **argv, char **envp)
 	int i;
 	struct sigaction sigact;
 	
+	//Log initialization.
 	loginit("SSHTunnels");
+	#ifdef SYSLOG
+	log_syslog_enabled = TRUE;
+	#else
+	log_syslog_enabled = FALSE;
+	#endif
+	
+	//Parse some command line options.
+	for(i = 1; i < argc; i++)
+		{
+		if(strcasecmp(argv[i], "--help") == 0)
+			usage();
+		else if(strcasecmp(argv[i], "--log-force-syslog") == 0)
+			{
+			logoutput(FALSE, STL_OUTPUT_SYSLOG);
+			log_syslog_force = TRUE;
+			}
+		}
 	
 	//Read in the configuration or die.
 	if(!read_configuration(envp))
@@ -225,22 +245,30 @@ void tagstart(void *data, const char *name, const char **attributes)
 					{
 					if(strcmp(attributes[i], "LogOutput") == 0)
 						{
-						if(strcasecmp(attributes[i+1], "stdout") == 0)
-							logoutput(FALSE, stdout);
-						else if(strcasecmp(attributes[i+1], "stderr") == 0)
-							logoutput(FALSE, stderr);
-						else if(strcasecmp(attributes[i+1], "syslog") == 0)
-							logoutput(FALSE, STL_OUTPUT_SYSLOG);
-						else //Literal file name for log output.
+						//Is syslog being forced?
+						if(log_syslog_enabled && log_syslog_force)
 							{
-							if((log_output_file = fopen(attributes[i+1], "ab")) == NULL)
+							logoutput(FALSE, STL_OUTPUT_SYSLOG);
+							}
+						else //Syslog is not being forced.
+							{
+							if(strcasecmp(attributes[i+1], "stdout") == 0)
+								logoutput(FALSE, stdout);
+							else if(strcasecmp(attributes[i+1], "stderr") == 0)
+								logoutput(FALSE, stderr);
+							else if(strcasecmp(attributes[i+1], "syslog") == 0)
+								logoutput(FALSE, STL_OUTPUT_SYSLOG);
+							else //Literal file name for log output.
 								{
-								logline(STL_ERROR, XMLPARSER "Could not open specified log file (%s) for writing! Line: %d.", attributes[i+1], (int)XML_GetCurrentLineNumber(parser));
-								state->failed = TRUE;
-								return;
+								if((log_output_file = fopen(attributes[i+1], "ab")) == NULL)
+									{
+									logline(STL_ERROR, XMLPARSER "Could not open specified log file (%s) for writing! Line: %d.", attributes[i+1], (int)XML_GetCurrentLineNumber(parser));
+									state->failed = TRUE;
+									return;
+									}
+								logoutput(FALSE, log_output_file);
+								logline(STL_INFO, "Opened log file (%s).", attributes[i+1]);
 								}
-							logoutput(0, log_output_file);
-							logline(STL_INFO, "Opened log file (%s).", attributes[i+1]);
 							}
 						}
 					if(strcmp(attributes[i], "SleepTimer") == 0)
@@ -578,5 +606,26 @@ void destroy_alltunnels(void)
 		free(main_tunnels);
 		main_tunnels = NULL;
 		}
+	}
+
+void usage(void)
+	{
+	logline(STL_INFO, "SSHTunnels - A program for generating and maintaining SSH Tunnels.");
+	logline(STL_INFO, "https://github.com/alexmarkley/SSHTunnels");
+	logline(STL_INFO, "");
+	logline(STL_INFO, "Copyright (C) 2015 Alex Markley");
+	logline(STL_INFO, "");
+	logline(STL_INFO, "This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later version.");
+	logline(STL_INFO, "");
+	logline(STL_INFO, "This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.");
+	logline(STL_INFO, "");
+	logline(STL_INFO, "You should have received a copy of the GNU General Public License along with this program; if not, write to the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.");
+	logline(STL_INFO, "");
+	logline(STL_INFO, "Basic Usage:");
+	logline(STL_INFO, "    SSHTunnels [--log-force-syslog]");
+	logline(STL_INFO, "");
+	logline(STL_INFO, "    --log-force-syslog - If SSHTunnels was built with syslog support, force all messages to go there, even if the configuration file implies that they should go somewhere else.");
+	logline(STL_INFO, "");
+	exit(1);
 	}
 

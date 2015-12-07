@@ -31,7 +31,15 @@
 
 FILE *logoutput(int query, FILE *newdest)
 	{
-	static FILE *outdest = STL_OUTPUT_DEFAULT;
+	static FILE *outdest;
+	static int initialized = FALSE;
+	
+	if(!initialized)
+		{
+		outdest = STL_OUTPUT_DEFAULT;
+		initialized = TRUE;
+		}
+	
 	if(!query)
 		{
 		#ifndef SYSLOG
@@ -69,6 +77,7 @@ void logline(int type, char *message_format, ...)
 	{
 	int loopa, loopb, freeable = 1, bufferlen = STL_BUFFERLEN_STEP, formatting, ret;
 	char *buffer = NULL, *buffer_temp = NULL;
+	FILE *outdest;
 	va_list arguments;
 
 	if(type == STL_INFO && STL_SUPRESS_ALL_INFO == TRUE) return;
@@ -136,49 +145,62 @@ void logline(int type, char *message_format, ...)
 			}
 		}
 	
-	#ifdef SYSLOG
-	if(buffer != NULL)
-		{
-		switch(type)
-			{
-			case STL_INFO:
-				syslog(LOG_INFO, "%s", buffer);
-				break;
-			case STL_WARNING:
-				syslog(LOG_WARNING, "%s", buffer);
-				break;
-			case STL_ERROR:
-				syslog(LOG_ERR, "%s", buffer);
-				break;
-			default:
-				logline(STL_WARNING, "Internal Program Error: Somebody sent a message without a valid message type! The errant message follows:");
-				syslog(LOG_WARNING, "%s", buffer);
-				break;
-			}
-		fflush(NULL);
-		}
-	#else
-	if(buffer != NULL)
-		{
-		switch(type)
-			{
-			case STL_INFO:
-				fprintf(logoutput(NULL), "%s: Info: %s\n", logname(NULL), buffer);
-				break;
-			case STL_WARNING:
-				fprintf(logoutput(NULL), "%s: Warning: %s\n", logname(NULL), buffer);
-				break;
-			case STL_ERROR:
-				fprintf(logoutput(NULL), "%s: Error: %s\n", logname(NULL), buffer);
-				break;
-			default:
-				logline(STL_WARNING, "Internal Program Error: Somebody sent a message without a valid message type! The errant message follows:");
-				fprintf(logoutput(NULL), "%s: Unknown Notice: %s\n", logname(NULL), buffer);
-				break;
-			}
-		fflush(NULL);
-		}
+	//Check the output destination.
+	outdest = logoutput(TRUE, NULL);
+	
+	//Make sure outdest is not set to syslog if syslog support is not built in.
+	#ifndef SYSLOG
+	if(outdest == STL_OUTPUT_SYSLOG)
+		outdest = stderr;
 	#endif
+	
+	//Actually output the log line.
+	if(buffer != NULL)
+		{
+		switch(type)
+			{
+			case STL_INFO:
+				#ifdef SYSLOG
+				if(outdest == STL_OUTPUT_SYSLOG)
+					syslog(LOG_INFO, "%s", buffer);
+				#endif
+				
+				if(outdest != STL_OUTPUT_SYSLOG)
+					fprintf(outdest, "%s: Info: %s\n", logname(NULL), buffer);
+				break;
+			case STL_WARNING:
+				#ifdef SYSLOG
+				if(outdest == STL_OUTPUT_SYSLOG)
+					syslog(LOG_WARNING, "%s", buffer);
+				#endif
+				
+				if(outdest != STL_OUTPUT_SYSLOG)
+					fprintf(outdest, "%s: Warning: %s\n", logname(NULL), buffer);
+				break;
+			case STL_ERROR:
+				#ifdef SYSLOG
+				if(outdest == STL_OUTPUT_SYSLOG)
+					syslog(LOG_ERR, "%s", buffer);
+				#endif
+				
+				if(outdest != STL_OUTPUT_SYSLOG)
+					fprintf(outdest, "%s: Error: %s\n", logname(NULL), buffer);
+				break;
+			default:
+				logline(STL_WARNING, "Internal Program Error: Somebody sent a message without a valid message type! The errant message follows:");
+				
+				#ifdef SYSLOG
+				if(outdest == STL_OUTPUT_SYSLOG)
+					syslog(LOG_WARNING, "%s", buffer);
+				#endif
+				
+				if(outdest != STL_OUTPUT_SYSLOG)
+					fprintf(outdest, "%s: Unknown Notice: %s\n", logname(NULL), buffer);
+				break;
+			}
+		if(outdest != STL_OUTPUT_SYSLOG)
+			fflush(NULL);
+		}
 	
 	if(freeable) free(buffer);
 	return;

@@ -45,12 +45,8 @@ enum
 //If SSHTunnels is built with syslog support, you can specify STL_OUTPUT_SYSLOG (basically a null FILE *) to refer to SYSLOG output
 #define STL_OUTPUT_SYSLOG NULL
 
-//If SSHTunnels is built with syslog support, we should direct messages to syslog by default. Otherwise stderr
-#ifdef SYSLOG
-#define STL_OUTPUT_DEFAULT STL_OUTPUT_SYSLOG
-#else
+//direct messages to stderr by default
 #define STL_OUTPUT_DEFAULT stderr
-#endif
 
 //Message formatting buffer size incrementation.
 #define STL_BUFFERLEN_STEP 128
