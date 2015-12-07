@@ -51,7 +51,7 @@ int main(int argc, char **argv)
 	//If we are, there's a good chance we'll kill the user's shell by accident.
 	if(isatty(STDIN_FILENO) || isatty(STDOUT_FILENO))
 		{
-		logline(STL_ERROR, "You probably don't want to run this program in a terminal. ;)");
+		stl(STL_ERROR, "You probably don't want to run this program in a terminal. ;)");
 		return 1;
 		}
 	
@@ -83,7 +83,7 @@ int main(int argc, char **argv)
 					{
 					if(header_pos >= (UPTOKEN_HEADER_BUFFER_SIZE - 2))
 						{
-						logline(STL_ERROR, "Error receiving header!");
+						stl(STL_ERROR, "Error receiving header!");
 						return -1;
 						}
 					header[header_pos] = buf[i];
@@ -112,7 +112,7 @@ int main(int argc, char **argv)
 					//Check header version first.
 					if(sscanf(header, "HeaderVersion: %d;", &header_version) < 1)
 						{
-						logline(STL_ERROR, "Couldn't parse header version string! Unknown header format! Proceeding with defaults...");
+						stl(STL_ERROR, "Couldn't parse header version string! Unknown header format! Proceeding with defaults...");
 						}
 					else //Got a header version number.
 						{
@@ -120,20 +120,20 @@ int main(int argc, char **argv)
 							{
 							if(sscanf(header, UPTOKEN_HEADER_FORMAT, &header_version, &header_uptoken_interval) < 2)
 								{
-								logline(STL_ERROR, "Couldn't parse header version string! Should be version 1, but unknown header format! Proceeding with defaults...");
+								stl(STL_ERROR, "Couldn't parse header version string! Should be version 1, but unknown header format! Proceeding with defaults...");
 								}
 							else //We got everything.
 								{
-								logline(STL_INFO, "Received Header Version %d. Uptoken Interval is %d.", header_version, header_uptoken_interval);
+								stl(STL_INFO, "Received Header Version %d. Uptoken Interval is %d.", header_version, header_uptoken_interval);
 								uptoken_interval = (time_t)header_uptoken_interval;
 								}
 							}
 						else
 							{
-							logline(STL_ERROR, "Couldn't parse header version string! Unknown header version %d! Proceeding with defaults...", header_version);
+							stl(STL_ERROR, "Couldn't parse header version string! Unknown header version %d! Proceeding with defaults...", header_version);
 							}
 						}
-					logline(STL_INFO, "Header parsing finished. Listening for UpTokens...");
+					stl(STL_INFO, "Header parsing finished. Listening for UpTokens...");
 					}
 				}
 			
@@ -143,7 +143,7 @@ int main(int argc, char **argv)
 				//Echo all bytes from STDIN to STDOUT.
 				if(write_all(STDOUT_FILENO, buf, buf_pos) < 0)
 					{
-					logline(STL_ERROR, "failed writing to STDOUT! (%s)", strerror(errno));
+					stl(STL_ERROR, "failed writing to STDOUT! (%s)", strerror(errno));
 					up = FALSE;
 					}
 				}
@@ -153,7 +153,7 @@ int main(int argc, char **argv)
 			//Because read() returned an error code, we need to check errno.
 			if(errno != EAGAIN && errno != EWOULDBLOCK)
 				{
-				logline(STL_ERROR, "failed reading from STDIN! (%s)", strerror(errno));
+				stl(STL_ERROR, "failed reading from STDIN! (%s)", strerror(errno));
 				up = FALSE;
 				}
 			//Zero bytes, but not an error.
@@ -162,7 +162,7 @@ int main(int argc, char **argv)
 		//Check the time. If it has been too long since we heard from the far end, we'll set up = FALSE;
 		if(now > (last_uptoken + uptoken_interval + UPTOKEN_INTERVAL_GRACEPERIOD))
 			{
-			logline(STL_ERROR, "Timeout waiting for input!");
+			stl(STL_ERROR, "Timeout waiting for input!");
 			up = FALSE;
 			}
 		
@@ -179,9 +179,9 @@ int main(int argc, char **argv)
 	//In the case of an SSH Tunnel with forwarded ports, a stale sshd process will hold open the necessary ports for a VERY LONG TIME.
 	//This mechanism sends SIGTERM to that process, killing it and guaranteeing that the ports are free.
 	ppid = getppid();
-	logline(STL_INFO, "Sending SIGTERM to parent process. (%d)", ppid);
+	stl(STL_INFO, "Sending SIGTERM to parent process. (%d)", ppid);
 	if(kill(ppid, SIGTERM) == -1)
-		logline(STL_ERROR, "kill(%d, SIGTERM) failed! (%s)", ppid, strerror(errno));
+		stl(STL_ERROR, "kill(%d, SIGTERM) failed! (%s)", ppid, strerror(errno));
 	
 	return 1; //There is no successful exit condition for this program.
 	}

@@ -53,7 +53,7 @@ enum
 
 FILE *logoutput(int query, FILE *newdest);
 void loginit(char *name);
-void logline(int status, char *message_format, ...); //Now supports printf() format conversion.
+void stl(int status, char *message_format, ...); //Now supports printf() format conversion.
 
 #define __SSHTUNNELS_LOG_H
 #endif

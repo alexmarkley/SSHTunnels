@@ -39,7 +39,7 @@ ssize_t write_all(int fd, const void *buf, size_t count)
 		wrote = write(fd, buftmp, count - bufpos);
 		if(wrote == 0)
 			{
-			logline(STL_ERROR, "write_all: write() apparently wrote zero bytes. errno probably was not set. Setting errno to EAGAIN and returning failure.");
+			stl(STL_ERROR, "write_all: write() apparently wrote zero bytes. errno probably was not set. Setting errno to EAGAIN and returning failure.");
 			errno = EAGAIN;
 			return -1;
 			}
@@ -87,17 +87,17 @@ int stdpipes_create(int *pipe_stdin, int *pipe_stdout, int *pipe_stderr)
 	{
 	if(pipe(pipe_stdin) < 0)
 		{
-		logline(STL_ERROR, "stdpipes_create: Call to pipe() for stdin failed! (%s)", strerror(errno));
+		stl(STL_ERROR, "stdpipes_create: Call to pipe() for stdin failed! (%s)", strerror(errno));
 		return FALSE;
 		}
 	if(pipe(pipe_stdout) < 0)
 		{
-		logline(STL_ERROR, "stdpipes_create: Call to pipe() for stdout failed! (%s)", strerror(errno));
+		stl(STL_ERROR, "stdpipes_create: Call to pipe() for stdout failed! (%s)", strerror(errno));
 		return FALSE;
 		}
 	if(pipe(pipe_stderr) < 0)
 		{
-		logline(STL_ERROR, "stdpipes_create: Call to pipe() for stderr failed! (%s)", strerror(errno));
+		stl(STL_ERROR, "stdpipes_create: Call to pipe() for stderr failed! (%s)", strerror(errno));
 		return FALSE;
 		}
 	return TRUE;
@@ -109,19 +109,19 @@ int stdpipes_close_far_end_parent(int *pipe_stdin, int *pipe_stdout, int *pipe_s
 	{
 	if(close(pipe_stdin[PIPE_READ]) < 0)
 		{
-		logline(STL_ERROR, "stdpipes_close_far_end_parent: Call to close() for stdin read failed! (%s)", strerror(errno));
+		stl(STL_ERROR, "stdpipes_close_far_end_parent: Call to close() for stdin read failed! (%s)", strerror(errno));
 		return FALSE;
 		}
 	pipe_stdin[PIPE_READ] = -1;
 	if(close(pipe_stdout[PIPE_WRITE]) < 0)
 		{
-		logline(STL_ERROR, "stdpipes_close_far_end_parent: Call to close() for stdout write failed! (%s)", strerror(errno));
+		stl(STL_ERROR, "stdpipes_close_far_end_parent: Call to close() for stdout write failed! (%s)", strerror(errno));
 		return FALSE;
 		}
 	pipe_stdout[PIPE_WRITE] = -1;
 	if(close(pipe_stderr[PIPE_WRITE]) < 0)
 		{
-		logline(STL_ERROR, "stdpipes_close_far_end_parent: Call to close() for stderr write failed! (%s)", strerror(errno));
+		stl(STL_ERROR, "stdpipes_close_far_end_parent: Call to close() for stderr write failed! (%s)", strerror(errno));
 		return FALSE;
 		}
 	pipe_stderr[PIPE_WRITE] = -1;
@@ -134,19 +134,19 @@ int stdpipes_close_far_end_child(int *pipe_stdin, int *pipe_stdout, int *pipe_st
 	{
 	if(close(pipe_stdin[PIPE_WRITE]) < 0)
 		{
-		logline(STL_ERROR, "stdpipes_close_far_end_child: Call to close() for stdin write failed! (%s)", strerror(errno));
+		stl(STL_ERROR, "stdpipes_close_far_end_child: Call to close() for stdin write failed! (%s)", strerror(errno));
 		return FALSE;
 		}
 	pipe_stdin[PIPE_WRITE] = -1;
 	if(close(pipe_stdout[PIPE_READ]) < 0)
 		{
-		logline(STL_ERROR, "stdpipes_close_far_end_child: Call to close() for stdout read failed! (%s)", strerror(errno));
+		stl(STL_ERROR, "stdpipes_close_far_end_child: Call to close() for stdout read failed! (%s)", strerror(errno));
 		return FALSE;
 		}
 	pipe_stdout[PIPE_READ] = -1;
 	if(close(pipe_stderr[PIPE_READ]) < 0)
 		{
-		logline(STL_ERROR, "stdpipes_close_far_end_child: Call to close() for stderr read failed! (%s)", strerror(errno));
+		stl(STL_ERROR, "stdpipes_close_far_end_child: Call to close() for stderr read failed! (%s)", strerror(errno));
 		return FALSE;
 		}
 	pipe_stderr[PIPE_READ] = -1;
@@ -160,17 +160,17 @@ int stdpipes_replace(int *pipe_stdin, int *pipe_stdout, int *pipe_stderr)
 	{
 	if(dup2(pipe_stdin[PIPE_READ], STDIN_FILENO) < 0)
 		{
-		logline(STL_ERROR, "stdpipes_replace: Call to dup2() for stdin failed! (%s)", strerror(errno));
+		stl(STL_ERROR, "stdpipes_replace: Call to dup2() for stdin failed! (%s)", strerror(errno));
 		return FALSE;
 		}
 	if(dup2(pipe_stdout[PIPE_WRITE], STDOUT_FILENO) < 0)
 		{
-		logline(STL_ERROR, "stdpipes_replace: Call to dup2() for stdout failed! (%s)", strerror(errno));
+		stl(STL_ERROR, "stdpipes_replace: Call to dup2() for stdout failed! (%s)", strerror(errno));
 		return FALSE;
 		}
 	if(dup2(pipe_stderr[PIPE_WRITE], STDERR_FILENO) < 0)
 		{
-		logline(STL_ERROR, "stdpipes_replace: Call to dup2() for stderr failed! (%s)", strerror(errno));
+		stl(STL_ERROR, "stdpipes_replace: Call to dup2() for stderr failed! (%s)", strerror(errno));
 		return FALSE;
 		}
 	return TRUE;
@@ -194,7 +194,7 @@ int stdpipes_close_remaining(int *pipe_stdin, int *pipe_stdout, int *pipe_stderr
 			{
 			if(close(*pipes[i]) < 0)
 				{
-				logline(STL_ERROR, "stdpipes_close_remaining: close() failed! (%s)", strerror(errno));
+				stl(STL_ERROR, "stdpipes_close_remaining: close() failed! (%s)", strerror(errno));
 				return FALSE;
 				}
 			*pipes[i] = -1;
@@ -212,7 +212,7 @@ int fd_set_nonblock(int fd)
 	pipe_flags = fcntl(fd, F_GETFL, 0);
 	if(fcntl(fd, F_SETFL, pipe_flags | O_NONBLOCK) < 0)
 		{
-		logline(STL_ERROR, "fd_set_nonblock: Call to fcntl() failed! (%s)", strerror(errno));
+		stl(STL_ERROR, "fd_set_nonblock: Call to fcntl() failed! (%s)", strerror(errno));
 		return FALSE;
 		}
 	return TRUE;

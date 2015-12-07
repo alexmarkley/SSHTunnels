@@ -100,14 +100,14 @@ int main(int argc, char **argv, char **envp)
 	sigemptyset(&sigact.sa_mask);
 	sigact.sa_flags = 0;
 	if(sigaction(SIGINT, &sigact, NULL) != 0)
-		logline(STL_WARNING, "Registering of SIGINT signal handler failed. (%s)", strerror(errno));
+		stl(STL_WARNING, "Registering of SIGINT signal handler failed. (%s)", strerror(errno));
 	if(sigaction(SIGHUP, &sigact, NULL) != 0)
-		logline(STL_WARNING, "Registering of SIGHUP signal handler failed. (%s)", strerror(errno));
+		stl(STL_WARNING, "Registering of SIGHUP signal handler failed. (%s)", strerror(errno));
 	if(sigaction(SIGTERM, &sigact, NULL) != 0)
-		logline(STL_WARNING, "Registering of SIGTERM signal handler failed. (%s)", strerror(errno));
+		stl(STL_WARNING, "Registering of SIGTERM signal handler failed. (%s)", strerror(errno));
 	sigact.sa_handler = brokenpipe_handler;
 	if(sigaction(SIGPIPE, &sigact, NULL) != 0)
-		logline(STL_WARNING, "Registering of SIGPIPE signal handler failed. (%s)", strerror(errno));
+		stl(STL_WARNING, "Registering of SIGPIPE signal handler failed. (%s)", strerror(errno));
 	
 	while(!main_finished)
 		{
@@ -116,7 +116,7 @@ int main(int argc, char **argv, char **envp)
 			{
 			if(!tunnel_maintenance(main_tunnels[i]))
 				{
-				logline(STL_ERROR, "FATAL! tunnel_maintenance() returned with an error.");
+				stl(STL_ERROR, "FATAL! tunnel_maintenance() returned with an error.");
 				main_finished = TRUE;
 				error = TRUE;
 				}
@@ -137,13 +137,13 @@ int main(int argc, char **argv, char **envp)
 
 void termination_handler(int signum)
 	{
-	logline(STL_INFO, "Caught signal %d.", signum);
+	stl(STL_INFO, "Caught signal %d.", signum);
 	main_finished = TRUE;
 	}
 
 void brokenpipe_handler(int signum)
 	{
-	logline(STL_WARNING, "Caught SIGPIPE (%d). Ignoring...", signum);
+	stl(STL_WARNING, "Caught SIGPIPE (%d). Ignoring...", signum);
 	}
 
 int read_configuration(char **defenvp)
@@ -178,7 +178,7 @@ int read_configuration(char **defenvp)
 	//Set up XML parser for configuration
 	if(!(parser = XML_ParserCreate(NULL)))
 		{
-		logline(STL_ERROR, "Failed initializing XML parser!");
+		stl(STL_ERROR, "Failed initializing XML parser!");
 		return FALSE;
 		}
 	XML_SetElementHandler(parser, tagstart, tagend);
@@ -190,9 +190,9 @@ int read_configuration(char **defenvp)
 		in = fopen(config_filename[i], "rb");
 	if(!in)
 		{
-		logline(STL_ERROR, "Failed to open " CONFIG_FILENAME);
+		stl(STL_ERROR, "Failed to open " CONFIG_FILENAME);
 		for(i = 0; config_filename[i]; i++)
-			logline(STL_ERROR, "Tried: %s", config_filename[i]);
+			stl(STL_ERROR, "Tried: %s", config_filename[i]);
 		return FALSE;
 		}
 	
@@ -206,7 +206,7 @@ int read_configuration(char **defenvp)
 		//Actually parse the chunk.
 		if(XML_Parse(parser, filebuffer, length, done) == 0)
 			{
-			logline(STL_ERROR, XMLPARSER "Failed at line %d: %s", (int)XML_GetCurrentLineNumber(parser), XML_ErrorString(XML_GetErrorCode(parser)));
+			stl(STL_ERROR, XMLPARSER "Failed at line %d: %s", (int)XML_GetCurrentLineNumber(parser), XML_ErrorString(XML_GetErrorCode(parser)));
 			fclose(in);
 			return FALSE;
 			}
@@ -215,7 +215,7 @@ int read_configuration(char **defenvp)
 	if(!state.failed && !state.seen_sshtunnels)
 		{
 		//This shouldn't be possible.
-		logline(STL_ERROR, XMLPARSER "Failed!");
+		stl(STL_ERROR, XMLPARSER "Failed!");
 		state.failed = TRUE;
 		}
 	
@@ -262,12 +262,12 @@ void tagstart(void *data, const char *name, const char **attributes)
 								{
 								if((log_output_file = fopen(attributes[i+1], "ab")) == NULL)
 									{
-									logline(STL_ERROR, XMLPARSER "Could not open specified log file (%s) for writing! Line: %d.", attributes[i+1], (int)XML_GetCurrentLineNumber(parser));
+									stl(STL_ERROR, XMLPARSER "Could not open specified log file (%s) for writing! Line: %d.", attributes[i+1], (int)XML_GetCurrentLineNumber(parser));
 									state->failed = TRUE;
 									return;
 									}
 								logoutput(FALSE, log_output_file);
-								logline(STL_INFO, "Opened log file (%s).", attributes[i+1]);
+								stl(STL_INFO, "Opened log file (%s).", attributes[i+1]);
 								}
 							}
 						}
@@ -275,13 +275,13 @@ void tagstart(void *data, const char *name, const char **attributes)
 						{
 						if(sscanf(attributes[i+1], "%d", &j) != 1)
 							{
-							logline(STL_ERROR, XMLPARSER "SleepTimer must be an integer! Line: %d", (int)XML_GetCurrentLineNumber(parser));
+							stl(STL_ERROR, XMLPARSER "SleepTimer must be an integer! Line: %d", (int)XML_GetCurrentLineNumber(parser));
 							state->failed = TRUE;
 							return;
 							}
 						if(j < 1 || j > 60)
 							{
-							logline(STL_ERROR, XMLPARSER "SleepTimer must be a positive integer between 1 and 60. Line: %d", (int)XML_GetCurrentLineNumber(parser));
+							stl(STL_ERROR, XMLPARSER "SleepTimer must be a positive integer between 1 and 60. Line: %d", (int)XML_GetCurrentLineNumber(parser));
 							state->failed = TRUE;
 							return;
 							}
@@ -291,7 +291,7 @@ void tagstart(void *data, const char *name, const char **attributes)
 				}
 			else
 				{
-				logline(STL_ERROR, XMLPARSER "Config XML must start with <SSHTunnels> tag. Line: %d.", (int)XML_GetCurrentLineNumber(parser));
+				stl(STL_ERROR, XMLPARSER "Config XML must start with <SSHTunnels> tag. Line: %d.", (int)XML_GetCurrentLineNumber(parser));
 				state->failed = TRUE;
 				return;
 				}
@@ -334,7 +334,7 @@ void tagstart(void *data, const char *name, const char **attributes)
 								state->uptoken_enabled = FALSE;
 							else
 								{
-								logline(STL_ERROR, XMLPARSER "UpTokenEnabled must be TRUE or FALSE! Line: %d.", (int)XML_GetCurrentLineNumber(parser));
+								stl(STL_ERROR, XMLPARSER "UpTokenEnabled must be TRUE or FALSE! Line: %d.", (int)XML_GetCurrentLineNumber(parser));
 								state->failed = TRUE;
 								return;
 								}
@@ -343,13 +343,13 @@ void tagstart(void *data, const char *name, const char **attributes)
 							{
 							if(sscanf(attributes[i+1], "%d", &j) != 1)
 								{
-								logline(STL_ERROR, XMLPARSER "UpTokenInterval must be an integer! Line: %d", (int)XML_GetCurrentLineNumber(parser));
+								stl(STL_ERROR, XMLPARSER "UpTokenInterval must be an integer! Line: %d", (int)XML_GetCurrentLineNumber(parser));
 								state->failed = TRUE;
 								return;
 								}
 							if(j < 1 || j > 60)
 								{
-								logline(STL_ERROR, XMLPARSER "UpTokenInterval must be a positive integer between 1 and 60. Line: %d", (int)XML_GetCurrentLineNumber(parser));
+								stl(STL_ERROR, XMLPARSER "UpTokenInterval must be a positive integer between 1 and 60. Line: %d", (int)XML_GetCurrentLineNumber(parser));
 								state->failed = TRUE;
 								return;
 								}
@@ -359,7 +359,7 @@ void tagstart(void *data, const char *name, const char **attributes)
 					}
 				else
 					{
-					logline(STL_ERROR, XMLPARSER "Only <Tunnel> tags allowed within <SSHTunnels> tag. Line: %d.", (int)XML_GetCurrentLineNumber(parser));
+					stl(STL_ERROR, XMLPARSER "Only <Tunnel> tags allowed within <SSHTunnels> tag. Line: %d.", (int)XML_GetCurrentLineNumber(parser));
 					state->failed = TRUE;
 					return;
 					}
@@ -382,14 +382,14 @@ void tagstart(void *data, const char *name, const char **attributes)
 								seenv = TRUE;
 								if((buf = calloc(strlen(attributes[i+1]) + 1, sizeof(char))) == NULL)
 									{
-									logline(STL_ERROR, "Out of memory!");
+									stl(STL_ERROR, "Out of memory!");
 									state->failed = TRUE;
 									return;
 									}
 								strcpy(buf, attributes[i+1]);
 								if((state->newargv = list_grow_insert(state->newargv, &buf, sizeof(char *), &state->newargv_len, &state->newargv_pos)) == NULL)
 									{
-									logline(STL_ERROR, "Out of memory!");
+									stl(STL_ERROR, "Out of memory!");
 									state->failed = TRUE;
 									free(buf);
 									return;
@@ -398,7 +398,7 @@ void tagstart(void *data, const char *name, const char **attributes)
 							}
 						if(!seenv)
 							{
-							logline(STL_ERROR, XMLPARSER "<ProgramArgument> tag requires \"v\" attribute. Line: %d.", (int)XML_GetCurrentLineNumber(parser));
+							stl(STL_ERROR, XMLPARSER "<ProgramArgument> tag requires \"v\" attribute. Line: %d.", (int)XML_GetCurrentLineNumber(parser));
 							state->failed = TRUE;
 							return;
 							}
@@ -424,21 +424,21 @@ void tagstart(void *data, const char *name, const char **attributes)
 							}
 						if(!seenv)
 							{
-							logline(STL_ERROR, XMLPARSER "<ProgramEnvironment> tag requires \"v\" attribute. Line: %d.", (int)XML_GetCurrentLineNumber(parser));
+							stl(STL_ERROR, XMLPARSER "<ProgramEnvironment> tag requires \"v\" attribute. Line: %d.", (int)XML_GetCurrentLineNumber(parser));
 							state->failed = TRUE;
 							return;
 							}
 						}
 					else
 						{
-						logline(STL_ERROR, XMLPARSER "Only <ProgramArgument> or <ProgramEnvironment> tags allowed within <Tunnel> tag. Line: %d.", (int)XML_GetCurrentLineNumber(parser));
+						stl(STL_ERROR, XMLPARSER "Only <ProgramArgument> or <ProgramEnvironment> tags allowed within <Tunnel> tag. Line: %d.", (int)XML_GetCurrentLineNumber(parser));
 						state->failed = TRUE;
 						return;
 						}
 					}
 				else //We are in either <ProgramArgument> or <ProgramEnvironment>
 					{
-					logline(STL_ERROR, XMLPARSER "No tags are allowed inside <ProgramArgument> or <ProgramEnvironment>. Line: %d.", (int)XML_GetCurrentLineNumber(parser));
+					stl(STL_ERROR, XMLPARSER "No tags are allowed inside <ProgramArgument> or <ProgramEnvironment>. Line: %d.", (int)XML_GetCurrentLineNumber(parser));
 					state->failed = TRUE;
 					return;
 					}
@@ -461,7 +461,7 @@ void tagend(void *data, const char *name)
 			state->in_sshtunnels = FALSE;
 			if(!state->seen_tunnel)
 				{
-				logline(STL_ERROR, XMLPARSER "At least one <Tunnel> required within <SSHTunnels>. Line: %d", (int)XML_GetCurrentLineNumber(parser));
+				stl(STL_ERROR, XMLPARSER "At least one <Tunnel> required within <SSHTunnels>. Line: %d", (int)XML_GetCurrentLineNumber(parser));
 				state->failed = TRUE;
 				return;
 				}
@@ -471,12 +471,12 @@ void tagend(void *data, const char *name)
 			state->in_tunnel = FALSE;
 			if(state->count_programargument < 1)
 				{
-				logline(STL_ERROR, XMLPARSER "At least one <ProgramArgument> required within <Tunnel>. Line: %d", (int)XML_GetCurrentLineNumber(parser));
+				stl(STL_ERROR, XMLPARSER "At least one <ProgramArgument> required within <Tunnel>. Line: %d", (int)XML_GetCurrentLineNumber(parser));
 				state->failed = TRUE;
 				return;
 				}
 			
-			logline(STL_INFO, XMLPARSER "Parsed <Tunnel> declaration with %d <ProgramArgument> tag(s) and %d <ProgramEnvironment> tag(s).", state->count_programargument, state->count_programenvironment);
+			stl(STL_INFO, XMLPARSER "Parsed <Tunnel> declaration with %d <ProgramArgument> tag(s) and %d <ProgramEnvironment> tag(s).", state->count_programargument, state->count_programenvironment);
 			
 			//Normalize interval.
 			if(state->uptoken_interval % main_sleep_seconds != 0)
@@ -484,14 +484,14 @@ void tagend(void *data, const char *name)
 				interval = ((state->uptoken_interval / main_sleep_seconds) + 1) * main_sleep_seconds;
 				if(interval > 60)
 					interval = main_sleep_seconds;
-				logline(STL_WARNING, "UpToken Interval of %d is not evenly divisible by the main Sleep Timer, which is set to %d. Using UpToken Interval of %d instead.", (int)state->uptoken_interval, (int)main_sleep_seconds, (int)interval);
+				stl(STL_WARNING, "UpToken Interval of %d is not evenly divisible by the main Sleep Timer, which is set to %d. Using UpToken Interval of %d instead.", (int)state->uptoken_interval, (int)main_sleep_seconds, (int)interval);
 				state->uptoken_interval = interval;
 				}
 			
 			//Handle tunnel object creation.
 			if((mytun = tunnel_create(state->newargv, state->newenvp, state->uptoken_enabled, state->uptoken_interval)) == NULL)
 				{
-				logline(STL_ERROR, "Tunnel object creation failed!");
+				stl(STL_ERROR, "Tunnel object creation failed!");
 				state->failed = TRUE;
 				destroy_arglist(state->newargv);
 				destroy_arglist(state->newenvp);
@@ -499,7 +499,7 @@ void tagend(void *data, const char *name)
 				}
 			if((main_tunnels = list_grow_insert(main_tunnels, &mytun, sizeof(struct tunnel *), &main_tunnels_len, &main_tunnels_pos)) == NULL)
 				{
-				logline(STL_ERROR, "Out of memory!");
+				stl(STL_ERROR, "Out of memory!");
 				state->failed = TRUE;
 				destroy_tunnel_argvenvp(mytun);
 				tunnel_destroy(mytun);
@@ -527,7 +527,7 @@ char *insert_new_environment_variable(char ***newenvp, int *newenvp_len, int *ne
 	
 	if((mynew = calloc(strlen(new) + 1, sizeof(char))) == NULL)
 		{
-		logline(STL_ERROR, "Out of memory!");
+		stl(STL_ERROR, "Out of memory!");
 		return NULL;
 		}
 	strcpy(mynew, new);
@@ -562,7 +562,7 @@ char *insert_new_environment_variable(char ***newenvp, int *newenvp_len, int *ne
 	//No duplicates. mynew needs to go onto the end of the list.
 	if((*newenvp = list_grow_insert(myenvp, &mynew, sizeof(char *), newenvp_len, newenvp_pos)) == NULL)
 		{
-		logline(STL_ERROR, "Out of memory!");
+		stl(STL_ERROR, "Out of memory!");
 		free(mynew);
 		return NULL;
 		}
@@ -610,22 +610,22 @@ void destroy_alltunnels(void)
 
 void usage(void)
 	{
-	logline(STL_INFO, "SSHTunnels - A program for generating and maintaining SSH Tunnels.");
-	logline(STL_INFO, "https://github.com/alexmarkley/SSHTunnels");
-	logline(STL_INFO, "");
-	logline(STL_INFO, "Copyright (C) 2015 Alex Markley");
-	logline(STL_INFO, "");
-	logline(STL_INFO, "This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later version.");
-	logline(STL_INFO, "");
-	logline(STL_INFO, "This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.");
-	logline(STL_INFO, "");
-	logline(STL_INFO, "You should have received a copy of the GNU General Public License along with this program; if not, write to the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.");
-	logline(STL_INFO, "");
-	logline(STL_INFO, "Basic Usage:");
-	logline(STL_INFO, "    SSHTunnels [--log-force-syslog]");
-	logline(STL_INFO, "");
-	logline(STL_INFO, "    --log-force-syslog - If SSHTunnels was built with syslog support, force all messages to go there, even if the configuration file implies that they should go somewhere else.");
-	logline(STL_INFO, "");
+	stl(STL_INFO, "SSHTunnels - A program for generating and maintaining SSH Tunnels.");
+	stl(STL_INFO, "https://github.com/alexmarkley/SSHTunnels");
+	stl(STL_INFO, "");
+	stl(STL_INFO, "Copyright (C) 2015 Alex Markley");
+	stl(STL_INFO, "");
+	stl(STL_INFO, "This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later version.");
+	stl(STL_INFO, "");
+	stl(STL_INFO, "This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.");
+	stl(STL_INFO, "");
+	stl(STL_INFO, "You should have received a copy of the GNU General Public License along with this program; if not, write to the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.");
+	stl(STL_INFO, "");
+	stl(STL_INFO, "Basic Usage:");
+	stl(STL_INFO, "    SSHTunnels [--log-force-syslog]");
+	stl(STL_INFO, "");
+	stl(STL_INFO, "    --log-force-syslog - If SSHTunnels was built with syslog support, force all messages to go there, even if the configuration file implies that they should go somewhere else.");
+	stl(STL_INFO, "");
 	exit(1);
 	}
 

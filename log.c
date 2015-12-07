@@ -73,7 +73,7 @@ void loginit(char *name)
 	initialized = TRUE;
 	}
 
-void logline(int type, char *message_format, ...)
+void stl(int type, char *message_format, ...)
 	{
 	int loopa, loopb, freeable = 1, bufferlen = STL_BUFFERLEN_STEP, formatting, ret;
 	char *buffer = NULL, *buffer_temp = NULL;
@@ -84,7 +84,7 @@ void logline(int type, char *message_format, ...)
 	
 	if(message_format == NULL)
 		{
-		logline(STL_ERROR, "Internal Program Error! NULL message?");
+		stl(STL_ERROR, "Internal Program Error! NULL message?");
 		return;
 		}
 	
@@ -94,7 +94,7 @@ void logline(int type, char *message_format, ...)
 		//We couldn't get any memory, so give up on that.
 		freeable = 0;
 		buffer = message_format;
-		logline(STL_ERROR, "Out Of Memory!");
+		stl(STL_ERROR, "Out Of Memory!");
 		}
 	else //We got our text buffer. Now we can populate it and perform a format conversion.
 		{
@@ -122,7 +122,7 @@ void logline(int type, char *message_format, ...)
 					//We couldn't get enough memory, so give up on that.
 					freeable = 0;
 					buffer = message_format;
-					logline(STL_ERROR, "Out Of Memory!");
+					stl(STL_ERROR, "Out Of Memory!");
 					formatting = 0;
 					}
 				else //We succeeded in reallocating.
@@ -187,7 +187,7 @@ void logline(int type, char *message_format, ...)
 					fprintf(outdest, "%s: Error: %s\n", logname(NULL), buffer);
 				break;
 			default:
-				logline(STL_WARNING, "Internal Program Error: Somebody sent a message without a valid message type! The errant message follows:");
+				stl(STL_WARNING, "Internal Program Error: Somebody sent a message without a valid message type! The errant message follows:");
 				
 				#ifdef SYSLOG
 				if(outdest == STL_OUTPUT_SYSLOG)
