@@ -25,14 +25,22 @@
 #include "main.h"
 #include "log.h"
 
-FILE *logoutput(FILE *replace)
+#ifdef SYSLOG
+#include <syslog.h>
+#endif
+
+FILE *logoutput(int query, FILE *newdest)
 	{
-	static FILE *out = NULL;
-	if(out == NULL)
-		out = LOG_DEFAULT_OUT;
-	if(replace != NULL)
-		out = replace;
-	return out;
+	static FILE *outdest = LOG_OUTPUT_DEFAULT;
+	if(!query)
+		{
+		#ifndef SYSLOG
+		if(newdest == LOG_OUTPUT_SYSLOG)
+			newdest = stderr;
+		#endif
+		outdest = newdest;
+		}
+	return outdest;
 	}
 
 char *logname(char *replace)
@@ -41,6 +49,20 @@ char *logname(char *replace)
 	if(replace != NULL)
 		n = replace;
 	return n;
+	}
+
+void loginit(char *name)
+	{
+	static initialized = FALSE;
+	logname(name);
+	
+	#ifdef SYSLOG
+	if(initialized)
+		closelog();
+	openlog(name, LOG_CONS | LOG_PID | LOG_PERROR, LOG_LOCAL0);
+	#endif
+	
+	initialized = TRUE;
 	}
 
 void logline(int type, char *message_format, ...)
@@ -114,6 +136,8 @@ void logline(int type, char *message_format, ...)
 			}
 		}
 	
+	#ifdef SYSLOG
+	#else
 	if(buffer != NULL)
 		{
 		switch(type)
@@ -134,6 +158,7 @@ void logline(int type, char *message_format, ...)
 			}
 		fflush(NULL);
 		}
+	#endif
 	
 	if(freeable) free(buffer);
 	return;

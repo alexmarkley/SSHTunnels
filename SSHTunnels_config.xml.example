@@ -31,7 +31,7 @@
     <SSHTunnels>
       - Top-level XML tag.
       - Attributes:
-          LogOutput (optional, defaults to stderr) should be stderr, stdout, or the literal path to a log file name.
+          LogOutput (optional, defaults to stderr) should be syslog, stderr, stdout, or the literal path to a log file name. (NOTE: Must be built with syslog support for syslog to work.)
           SleepTimer (optional, defaults to 5) is an integer number of seconds that the main loop will sleep before doing anything else. Turning this up past 5 seconds has the potential to decrease your CPU usage, but will cause all of the tunnel monitoring processes to become less responsive.
     
     <Tunnel>

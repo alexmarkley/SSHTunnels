@@ -7,7 +7,14 @@ UPTOKENRECEIVER_OBJECTS=receiver.o log.o util.o
 #The installation prefix can be set at built time to indicate where SSHTunnels should look for a configuration file.
 PREFIX=/usr/local
 
-CFLAGS+=-Wall -O2 `pkg-config --cflags expat` -DPREFIX=\"$(PREFIX)\"
+#Build with syslog enabled? (By default, no.)
+ifdef WITHSYSLOG
+SYSLOG_CFLAGS=-DSYSLOG
+else
+SYSLOG_CFLAGS=
+endif
+
+CFLAGS+=-Wall -O2 `pkg-config --cflags expat` -DPREFIX=\"$(PREFIX)\" $(SYSLOG_CFLAGS)
 SSHTUNNELS_LDFLAGS=-Wall -lm `pkg-config --libs expat`
 UPTOKENRECEIVER_LDFLAGS=-Wall
 

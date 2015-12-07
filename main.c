@@ -66,7 +66,7 @@ int main(int argc, char **argv, char **envp)
 	int i;
 	struct sigaction sigact;
 	
-	logname("SSHTunnels");
+	loginit("SSHTunnels");
 	
 	//Read in the configuration or die.
 	if(!read_configuration(envp))
@@ -226,9 +226,11 @@ void tagstart(void *data, const char *name, const char **attributes)
 					if(strcmp(attributes[i], "LogOutput") == 0)
 						{
 						if(strcasecmp(attributes[i+1], "stdout") == 0)
-							logoutput(stdout);
+							logoutput(FALSE, stdout);
 						else if(strcasecmp(attributes[i+1], "stderr") == 0)
-							logoutput(stderr);
+							logoutput(FALSE, stderr);
+						else if(strcasecmp(attributes[i+1], "syslog") == 0)
+							logoutput(FALSE, LOG_OUTPUT_SYSLOG);
 						else //Literal file name for log output.
 							{
 							if((log_output_file = fopen(attributes[i+1], "ab")) == NULL)
@@ -237,7 +239,7 @@ void tagstart(void *data, const char *name, const char **attributes)
 								state->failed = TRUE;
 								return;
 								}
-							logoutput(log_output_file);
+							logoutput(0, log_output_file);
 							logline(LOG_INFO, "Opened log file (%s).", attributes[i+1]);
 							}
 						}

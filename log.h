@@ -42,14 +42,21 @@ enum
 //the MB setting above.
 #define LOG_SUPRESS_ALL_INFO FALSE //(Can be TRUE or FALSE).
 
-//We can do any number of things here. We could write these to a log file, we could open informational dialog boxes, whatever.
-#define LOG_DEFAULT_OUT stderr
+//If SSHTunnels is built with syslog support, you can specify LOG_OUTPUT_SYSLOG (basically a null FILE *) to refer to SYSLOG output
+#define LOG_OUTPUT_SYSLOG null
+
+//If SSHTunnels is built with syslog support, we should direct messages to syslog by default. Otherwise stderr
+#ifdef SYSLOG
+#define LOG_OUTPUT_DEFAULT LOG_OUTPUT_SYSLOG
+#else
+#define LOG_OUTPUT_DEFAULT stderr
+#endif
 
 //Message formatting buffer size incrementation.
 #define LOG_BUFFERLEN_STEP 128
 
-FILE *logoutput(FILE *replace);
-char *logname(char *replace);
+FILE *logoutput(int query, FILE *newdest);
+void loginit(char *name);
 void logline(int status, char *message_format, ...); //Now supports printf() format conversion.
 
 #define __SSHTUNNELS_LOG_H
