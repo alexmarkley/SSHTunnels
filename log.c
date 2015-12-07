@@ -31,11 +31,11 @@
 
 FILE *logoutput(int query, FILE *newdest)
 	{
-	static FILE *outdest = LOG_OUTPUT_DEFAULT;
+	static FILE *outdest = STL_OUTPUT_DEFAULT;
 	if(!query)
 		{
 		#ifndef SYSLOG
-		if(newdest == LOG_OUTPUT_SYSLOG)
+		if(newdest == STL_OUTPUT_SYSLOG)
 			newdest = stderr;
 		#endif
 		outdest = newdest;
@@ -67,15 +67,15 @@ void loginit(char *name)
 
 void logline(int type, char *message_format, ...)
 	{
-	int loopa, loopb, freeable = 1, bufferlen = LOG_BUFFERLEN_STEP, formatting, ret;
+	int loopa, loopb, freeable = 1, bufferlen = STL_BUFFERLEN_STEP, formatting, ret;
 	char *buffer = NULL, *buffer_temp = NULL;
 	va_list arguments;
 
-	if(type == LOG_INFO && LOG_SUPRESS_ALL_INFO == TRUE) return;
+	if(type == STL_INFO && STL_SUPRESS_ALL_INFO == TRUE) return;
 	
 	if(message_format == NULL)
 		{
-		logline(LOG_ERROR, "Internal Program Error! NULL message?");
+		logline(STL_ERROR, "Internal Program Error! NULL message?");
 		return;
 		}
 	
@@ -85,7 +85,7 @@ void logline(int type, char *message_format, ...)
 		//We couldn't get any memory, so give up on that.
 		freeable = 0;
 		buffer = message_format;
-		logline(LOG_ERROR, "Out Of Memory!");
+		logline(STL_ERROR, "Out Of Memory!");
 		}
 	else //We got our text buffer. Now we can populate it and perform a format conversion.
 		{
@@ -106,14 +106,14 @@ void logline(int type, char *message_format, ...)
 			else //The formatting failed! Need more memory!
 				{
 				//We need to increase the size of the buffer.
-				bufferlen = bufferlen + LOG_BUFFERLEN_STEP;
+				bufferlen = bufferlen + STL_BUFFERLEN_STEP;
 				if((buffer_temp = realloc(buffer, bufferlen)) == NULL)
 					{
 					free(buffer);
 					//We couldn't get enough memory, so give up on that.
 					freeable = 0;
 					buffer = message_format;
-					logline(LOG_ERROR, "Out Of Memory!");
+					logline(STL_ERROR, "Out Of Memory!");
 					formatting = 0;
 					}
 				else //We succeeded in reallocating.
@@ -137,22 +137,42 @@ void logline(int type, char *message_format, ...)
 		}
 	
 	#ifdef SYSLOG
+	if(buffer != NULL)
+		{
+		switch(type)
+			{
+			case STL_INFO:
+				syslog(LOG_INFO, buffer);
+				break;
+			case STL_WARNING:
+				syslog(LOG_WARNING, buffer);
+				break;
+			case STL_ERROR:
+				syslog(LOG_ERR, buffer);
+				break;
+			default:
+				logline(STL_WARNING, "Internal Program Error: Somebody sent a message without a valid message type! The errant message follows:");
+				syslog(LOG_WARNING, buffer);
+				break;
+			}
+		fflush(NULL);
+		}
 	#else
 	if(buffer != NULL)
 		{
 		switch(type)
 			{
-			case LOG_INFO:
+			case STL_INFO:
 				fprintf(logoutput(NULL), "%s: Info: %s\n", logname(NULL), buffer);
 				break;
-			case LOG_WARNING:
+			case STL_WARNING:
 				fprintf(logoutput(NULL), "%s: Warning: %s\n", logname(NULL), buffer);
 				break;
-			case LOG_ERROR:
+			case STL_ERROR:
 				fprintf(logoutput(NULL), "%s: Error: %s\n", logname(NULL), buffer);
 				break;
 			default:
-				logline(LOG_WARNING, "Internal Program Error: Somebody sent a message without a valid message type! The errant message follows:");
+				logline(STL_WARNING, "Internal Program Error: Somebody sent a message without a valid message type! The errant message follows:");
 				fprintf(logoutput(NULL), "%s: Unknown Notice: %s\n", logname(NULL), buffer);
 				break;
 			}

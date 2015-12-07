@@ -31,29 +31,29 @@
 //Valid log levels.
 enum
 	{
-	LOG_ERROR,
-	LOG_WARNING,
-	LOG_INFO,
-	LOG_RESERVED
+	STL_ERROR,
+	STL_WARNING,
+	STL_INFO,
+	STL_RESERVED
 	};
 
 //Should we even bother dumping INFO messages?
 //If this is TRUE, don't generate any info messages regardless of
 //the MB setting above.
-#define LOG_SUPRESS_ALL_INFO FALSE //(Can be TRUE or FALSE).
+#define STL_SUPRESS_ALL_INFO FALSE //(Can be TRUE or FALSE).
 
-//If SSHTunnels is built with syslog support, you can specify LOG_OUTPUT_SYSLOG (basically a null FILE *) to refer to SYSLOG output
-#define LOG_OUTPUT_SYSLOG null
+//If SSHTunnels is built with syslog support, you can specify STL_OUTPUT_SYSLOG (basically a null FILE *) to refer to SYSLOG output
+#define STL_OUTPUT_SYSLOG NULL
 
 //If SSHTunnels is built with syslog support, we should direct messages to syslog by default. Otherwise stderr
 #ifdef SYSLOG
-#define LOG_OUTPUT_DEFAULT LOG_OUTPUT_SYSLOG
+#define STL_OUTPUT_DEFAULT STL_OUTPUT_SYSLOG
 #else
-#define LOG_OUTPUT_DEFAULT stderr
+#define STL_OUTPUT_DEFAULT stderr
 #endif
 
 //Message formatting buffer size incrementation.
-#define LOG_BUFFERLEN_STEP 128
+#define STL_BUFFERLEN_STEP 128
 
 FILE *logoutput(int query, FILE *newdest);
 void loginit(char *name);
