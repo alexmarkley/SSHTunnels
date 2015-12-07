@@ -69,7 +69,7 @@ int main(int argc, char **argv, char **envp)
 	struct sigaction sigact;
 	
 	//Log initialization.
-	loginit("SSHTunnels");
+	stl_loginit("SSHTunnels");
 	#ifdef SYSLOG
 	log_syslog_enabled = TRUE;
 	#else
@@ -83,7 +83,7 @@ int main(int argc, char **argv, char **envp)
 			usage();
 		else if(strcasecmp(argv[i], "--log-force-syslog") == 0)
 			{
-			logoutput(FALSE, STL_OUTPUT_SYSLOG);
+			stl_logoutput(FALSE, STL_OUTPUT_SYSLOG);
 			log_syslog_force = TRUE;
 			}
 		}
@@ -248,16 +248,16 @@ void tagstart(void *data, const char *name, const char **attributes)
 						//Is syslog being forced?
 						if(log_syslog_enabled && log_syslog_force)
 							{
-							logoutput(FALSE, STL_OUTPUT_SYSLOG);
+							stl_logoutput(FALSE, STL_OUTPUT_SYSLOG);
 							}
 						else //Syslog is not being forced.
 							{
 							if(strcasecmp(attributes[i+1], "stdout") == 0)
-								logoutput(FALSE, stdout);
+								stl_logoutput(FALSE, stdout);
 							else if(strcasecmp(attributes[i+1], "stderr") == 0)
-								logoutput(FALSE, stderr);
+								stl_logoutput(FALSE, stderr);
 							else if(strcasecmp(attributes[i+1], "syslog") == 0)
-								logoutput(FALSE, STL_OUTPUT_SYSLOG);
+								stl_logoutput(FALSE, STL_OUTPUT_SYSLOG);
 							else //Literal file name for log output.
 								{
 								if((log_output_file = fopen(attributes[i+1], "ab")) == NULL)
@@ -266,7 +266,7 @@ void tagstart(void *data, const char *name, const char **attributes)
 									state->failed = TRUE;
 									return;
 									}
-								logoutput(FALSE, log_output_file);
+								stl_logoutput(FALSE, log_output_file);
 								stl(STL_INFO, "Opened log file (%s).", attributes[i+1]);
 								}
 							}

@@ -29,7 +29,7 @@
 #include <syslog.h>
 #endif
 
-FILE *logoutput(int query, FILE *newdest)
+FILE *stl_logoutput(int query, FILE *newdest)
 	{
 	static FILE *outdest;
 	static int initialized = FALSE;
@@ -51,7 +51,7 @@ FILE *logoutput(int query, FILE *newdest)
 	return outdest;
 	}
 
-char *logname(char *replace)
+char *stl_logname(char *replace)
 	{
 	static char *n = NULL;
 	if(replace != NULL)
@@ -59,10 +59,10 @@ char *logname(char *replace)
 	return n;
 	}
 
-void loginit(char *name)
+void stl_loginit(char *name)
 	{
 	static int initialized = FALSE;
-	logname(name);
+	stl_logname(name);
 	
 	#ifdef SYSLOG
 	if(initialized)
@@ -146,7 +146,7 @@ void stl(int type, char *message_format, ...)
 		}
 	
 	//Check the output destination.
-	outdest = logoutput(TRUE, NULL);
+	outdest = stl_logoutput(TRUE, NULL);
 	
 	//Make sure outdest is not set to syslog if syslog support is not built in.
 	#ifndef SYSLOG
@@ -166,7 +166,7 @@ void stl(int type, char *message_format, ...)
 				#endif
 				
 				if(outdest != STL_OUTPUT_SYSLOG)
-					fprintf(outdest, "%s: Info: %s\n", logname(NULL), buffer);
+					fprintf(outdest, "%s: Info: %s\n", stl_logname(NULL), buffer);
 				break;
 			case STL_WARNING:
 				#ifdef SYSLOG
@@ -175,7 +175,7 @@ void stl(int type, char *message_format, ...)
 				#endif
 				
 				if(outdest != STL_OUTPUT_SYSLOG)
-					fprintf(outdest, "%s: Warning: %s\n", logname(NULL), buffer);
+					fprintf(outdest, "%s: Warning: %s\n", stl_logname(NULL), buffer);
 				break;
 			case STL_ERROR:
 				#ifdef SYSLOG
@@ -184,7 +184,7 @@ void stl(int type, char *message_format, ...)
 				#endif
 				
 				if(outdest != STL_OUTPUT_SYSLOG)
-					fprintf(outdest, "%s: Error: %s\n", logname(NULL), buffer);
+					fprintf(outdest, "%s: Error: %s\n", stl_logname(NULL), buffer);
 				break;
 			default:
 				stl(STL_WARNING, "Internal Program Error: Somebody sent a message without a valid message type! The errant message follows:");
@@ -195,7 +195,7 @@ void stl(int type, char *message_format, ...)
 				#endif
 				
 				if(outdest != STL_OUTPUT_SYSLOG)
-					fprintf(outdest, "%s: Unknown Notice: %s\n", logname(NULL), buffer);
+					fprintf(outdest, "%s: Unknown Notice: %s\n", stl_logname(NULL), buffer);
 				break;
 			}
 		if(outdest != STL_OUTPUT_SYSLOG)

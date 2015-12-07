@@ -42,7 +42,7 @@ int main(int argc, char **argv)
 	pid_t ppid;
 	char buf[UPTOKEN_BUFFER_SIZE], header[UPTOKEN_HEADER_BUFFER_SIZE];
 	
-	loginit("UpTokenReceiver");
+	stl_loginit("UpTokenReceiver");
 	
 	//Zero out header buffer.
 	memset(header, 0, UPTOKEN_HEADER_BUFFER_SIZE);

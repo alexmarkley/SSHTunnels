@@ -51,8 +51,8 @@ enum
 //Message formatting buffer size incrementation.
 #define STL_BUFFERLEN_STEP 128
 
-FILE *logoutput(int query, FILE *newdest);
-void loginit(char *name);
+FILE *stl_logoutput(int query, FILE *newdest);
+void stl_loginit(char *name);
 void stl(int status, char *message_format, ...); //Now supports printf() format conversion.
 
 #define __SSHTUNNELS_LOG_H
