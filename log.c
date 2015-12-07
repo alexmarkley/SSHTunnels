@@ -53,7 +53,7 @@ char *logname(char *replace)
 
 void loginit(char *name)
 	{
-	static initialized = FALSE;
+	static int initialized = FALSE;
 	logname(name);
 	
 	#ifdef SYSLOG
@@ -142,17 +142,17 @@ void logline(int type, char *message_format, ...)
 		switch(type)
 			{
 			case STL_INFO:
-				syslog(LOG_INFO, buffer);
+				syslog(LOG_INFO, "%s", buffer);
 				break;
 			case STL_WARNING:
-				syslog(LOG_WARNING, buffer);
+				syslog(LOG_WARNING, "%s", buffer);
 				break;
 			case STL_ERROR:
-				syslog(LOG_ERR, buffer);
+				syslog(LOG_ERR, "%s", buffer);
 				break;
 			default:
 				logline(STL_WARNING, "Internal Program Error: Somebody sent a message without a valid message type! The errant message follows:");
-				syslog(LOG_WARNING, buffer);
+				syslog(LOG_WARNING, "%s", buffer);
 				break;
 			}
 		fflush(NULL);
