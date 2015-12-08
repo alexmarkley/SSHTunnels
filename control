@@ -1,7 +1,7 @@
 Package: net.malexmedia.sshtunnels
 Name: SSHTunnels
 Depends: 
-Version: 0.0.4
+Version: 0.0.5
 Architecture: iphoneos-arm
 Description: A pair of programs to babysit both ends of an SSH tunnel.
 Maintainer: Alex Markley
